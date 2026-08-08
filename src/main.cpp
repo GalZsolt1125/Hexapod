@@ -7,6 +7,7 @@
 #include "InverseKinematics.h"
 #include "ServoMotor.h"
 #include "ServoConfig.h"
+#include "RobotController.h"
 
 Adafruit_PWMServoDriver pwmLeft(0x40);
 Adafruit_PWMServoDriver pwmRight(0x41);
@@ -35,57 +36,34 @@ ServoMotor createServo(LegID leg, ServoJoint joint) {
     );
 }
 
-ServoMotor servos[6][3] = {
-    {
-        createServo(LEG_LF, JOINT_COXA),
-        createServo(LEG_LF, JOINT_FEMUR),
-        createServo(LEG_LF, JOINT_TIBIA)
-    },
-    {
-        createServo(LEG_LM, JOINT_COXA),
-        createServo(LEG_LM, JOINT_FEMUR),
-        createServo(LEG_LM, JOINT_TIBIA)
-    },
-    {
-        createServo(LEG_LR, JOINT_COXA),
-        createServo(LEG_LR, JOINT_FEMUR),
-        createServo(LEG_LR, JOINT_TIBIA)
-    },
-    {
-        createServo(LEG_RF, JOINT_COXA),
-        createServo(LEG_RF, JOINT_FEMUR),
-        createServo(LEG_RF, JOINT_TIBIA)
-    },
-    {
-        createServo(LEG_RM, JOINT_COXA),
-        createServo(LEG_RM, JOINT_FEMUR),
-        createServo(LEG_RM, JOINT_TIBIA)
-    },
-    {
-        createServo(LEG_RR, JOINT_COXA),
-        createServo(LEG_RR, JOINT_FEMUR),
-        createServo(LEG_RR, JOINT_TIBIA)
-    }
+ServoMotor coxa[6] = {
+    createServo(LEG_LF, JOINT_COXA),
+    createServo(LEG_LM, JOINT_COXA),
+    createServo(LEG_LR, JOINT_COXA),
+    createServo(LEG_RF, JOINT_COXA),
+    createServo(LEG_RM, JOINT_COXA),
+    createServo(LEG_RR, JOINT_COXA)
 };
 
-const char* legNames[6] = {
-    "LF",
-    "LM",
-    "LR",
-    "RF",
-    "RM",
-    "RR"
+ServoMotor femur[6] = {
+    createServo(LEG_LF, JOINT_FEMUR),
+    createServo(LEG_LM, JOINT_FEMUR),
+    createServo(LEG_LR, JOINT_FEMUR),
+    createServo(LEG_RF, JOINT_FEMUR),
+    createServo(LEG_RM, JOINT_FEMUR),
+    createServo(LEG_RR, JOINT_FEMUR)
 };
 
-void printPoint(const char* name, const Point3D& point) {
-    Serial.print(name);
-    Serial.print(": ");
-    Serial.print(point.x, 3);
-    Serial.print(", ");
-    Serial.print(point.y, 3);
-    Serial.print(", ");
-    Serial.println(point.z, 3);
-}
+ServoMotor tibia[6] = {
+    createServo(LEG_LF, JOINT_TIBIA),
+    createServo(LEG_LM, JOINT_TIBIA),
+    createServo(LEG_LR, JOINT_TIBIA),
+    createServo(LEG_RF, JOINT_TIBIA),
+    createServo(LEG_RM, JOINT_TIBIA),
+    createServo(LEG_RR, JOINT_TIBIA)
+};
+
+RobotController robot(coxa, femur, tibia);
 
 void setup() {
     Serial.begin(115200);
@@ -101,67 +79,32 @@ void setup() {
 
     delay(500);
 
-    const Point3D referenceLocal = {
+    const Point3D reference = {
         136.255f,
-        0.0f,
+        50.0f,
         -108.306f
     };
 
-    Serial.println();
-    Serial.println("=== 6 LEG IK + SERVO TEST ===");
+    Point3D targets[6];
 
     for (int i = 0; i < 6; i++) {
-
-        LegID leg = static_cast<LegID>(i);
-
-        Point3D footB =
-            localToBody(leg, referenceLocal);
-
-        Point3D footLocal =
-            bodyToLocal(leg, footB);
-
-        IKResult result =
-            calculateIK(footLocal);
-
-        Serial.println();
-        Serial.print("--- ");
-        Serial.print(legNames[i]);
-        Serial.println(" ---");
-
-        printPoint("Body : ", footB);
-        printPoint("Local: ", footLocal);
-
-        if (!result.valid) {
-            Serial.println("IK: INVALID");
-            continue;
-        }
-
-        Serial.println("IK: VALID");
-
-        Serial.print("Coxa:  ");
-        Serial.println(result.angles.coxa, 4);
-
-        Serial.print("Femur: ");
-        Serial.println(result.angles.femur, 4);
-
-        Serial.print("Tibia: ");
-        Serial.println(result.angles.tibia, 4);
-
-        servos[i][JOINT_COXA].setAngle(
-            result.angles.coxa
-        );
-
-        servos[i][JOINT_FEMUR].setAngle(
-            result.angles.femur
-        );
-
-        servos[i][JOINT_TIBIA].setAngle(
-            result.angles.tibia
-        );
+        targets[i] =
+            localToBody(
+                static_cast<LegID>(i),
+                reference
+            );
     }
 
+    bool valid =
+        robot.setAllLegsPosition(targets);
+
     Serial.println();
-    Serial.println("=== TEST COMPLETE ===");
+
+    if (valid) {
+        Serial.println("ROBOT POSITION: VALID");
+    } else {
+        Serial.println("ROBOT POSITION: INVALID");
+    }
 }
 
 void loop() {
