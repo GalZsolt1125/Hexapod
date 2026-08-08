@@ -3,7 +3,7 @@
 
 #include <cmath>
 
-constexpr float PI = 3.14159265359f;
+constexpr float MY_PI = 3.14159265359f;
 
 struct Point3D {
     float x;
@@ -50,7 +50,7 @@ inline Point3D bodyToLocal(LegID legId, const Point3D& bodyPoint) {
     float dy = bodyPoint.y - att.offsetB.y;
     float dz = bodyPoint.z - att.offsetB.z;
 
-    float rad = -att.mountAngleDeg * PI / 180.0f;
+    float rad = -att.mountAngleDeg * MY_PI / 180.0f;
     float cosA = std::cos(rad);
     float sinA = std::sin(rad);
 
@@ -65,7 +65,7 @@ inline Point3D bodyToLocal(LegID legId, const Point3D& bodyPoint) {
 inline Point3D localToBody(LegID legId, const Point3D& localPoint) {
     const LegAttachment& att = LEGS[legId];
 
-    float rad = att.mountAngleDeg * PI / 180.0f;
+    float rad = att.mountAngleDeg * MY_PI / 180.0f;
     float cosA = std::cos(rad);
     float sinA = std::sin(rad);
 

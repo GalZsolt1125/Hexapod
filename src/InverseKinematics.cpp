@@ -78,14 +78,14 @@ IKResult calculateIK(const Point3D& footLocal) {
 
     float femurAngle =
         (targetAngle + femurTriangleAngle)
-        * 180.0f / PI;
+        * 180.0f / MY_PI;
 
     float tibiaAngle =
         90.0f -
-        kneeInternalAngle * 180.0f / PI;
+        kneeInternalAngle * 180.0f / MY_PI;
 
     result.angles.coxa =
-        coxaAngle * 180.0f / PI;
+        coxaAngle * 180.0f / MY_PI;
 
     result.angles.femur = femurAngle;
     result.angles.tibia = tibiaAngle;
