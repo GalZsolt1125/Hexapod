@@ -30,16 +30,16 @@ IKResult calculateIK(const Point3D& footLocal) {
 
     float dx = radialDistance - coxa;
 
-    float planarDistance = std::sqrt(
+    float legDistance = std::sqrt(
         dx * dx +
         footLocal.z * footLocal.z
     );
 
-    if (planarDistance > femur + tibia) {
+    if (legDistance > femur + tibia) {
         return result;
     }
 
-    if (planarDistance < std::fabs(femur - tibia)) {
+    if (legDistance < std::fabs(femur - tibia)) {
         return result;
     }
 
@@ -50,12 +50,12 @@ IKResult calculateIK(const Point3D& footLocal) {
 
     float femurCos = (
         femur * femur +
-        planarDistance * planarDistance -
+        legDistance * legDistance -
         tibia * tibia
     ) / (
         2.0f *
         femur *
-        planarDistance
+        legDistance
     );
 
     femurCos = clampFloat(femurCos, -1.0f, 1.0f);
@@ -65,7 +65,7 @@ IKResult calculateIK(const Point3D& footLocal) {
     float kneeCos = (
         femur * femur +
         tibia * tibia -
-        planarDistance * planarDistance
+        legDistance * legDistance
     ) / (
         2.0f *
         femur *
@@ -76,15 +76,19 @@ IKResult calculateIK(const Point3D& footLocal) {
 
     float kneeInternalAngle = std::acos(kneeCos);
 
-    result.angles.coxa =
-        coxaAngle * 180.0f / PI;
-
-    result.angles.femur =
+    float femurAngle =
         (targetAngle + femurTriangleAngle)
         * 180.0f / PI;
 
-    result.angles.tibia =
+    float tibiaAngle =
+        90.0f -
         kneeInternalAngle * 180.0f / PI;
+
+    result.angles.coxa =
+        coxaAngle * 180.0f / PI;
+
+    result.angles.femur = femurAngle;
+    result.angles.tibia = tibiaAngle;
 
     result.valid = true;
 
