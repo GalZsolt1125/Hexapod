@@ -32,7 +32,7 @@ constexpr float DEFAULT_MAX = 90.0f;
 const ServoConfigData SERVOS[6][3] = {
 
     {
-        { DRIVER_LEFT, 0,  5.0f, true,  DEFAULT_MIN, DEFAULT_MAX },
+        { DRIVER_LEFT, 0,  5.0f, false,  DEFAULT_MIN, DEFAULT_MAX },
         { DRIVER_LEFT, 1, -4.0f, true,  DEFAULT_MIN, DEFAULT_MAX },
         { DRIVER_LEFT, 2,  0.0f, true,  DEFAULT_MIN, DEFAULT_MAX }
     },

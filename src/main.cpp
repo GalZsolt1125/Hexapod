@@ -8,6 +8,7 @@
 #include "ServoMotor.h"
 #include "ServoConfig.h"
 #include "RobotController.h"
+#include "Trajectory.h"
 
 Adafruit_PWMServoDriver pwmLeft(0x40);
 Adafruit_PWMServoDriver pwmRight(0x41);
@@ -65,6 +66,25 @@ ServoMotor tibia[6] = {
 
 RobotController robot(coxa, femur, tibia);
 
+TrajectoryParams trajectory = {
+    40.0f,
+    30.0f
+};
+
+const float STEP_PERIOD = 2.0f;
+
+Point3D homeBody =
+    localToBody(
+        LEG_LF,
+        {
+            136.255f,
+            0.0f,
+            -108.306f
+        }
+    );
+
+unsigned long startTime;
+
 void setup() {
     Serial.begin(115200);
     delay(1000);
@@ -79,33 +99,72 @@ void setup() {
 
     delay(500);
 
-    const Point3D reference = {
-        136.255f,
-        50.0f,
-        -108.306f
-    };
-
-    Point3D targets[6];
+    Point3D homePositions[6];
 
     for (int i = 0; i < 6; i++) {
-        targets[i] =
+        Point3D homeLocal = {
+            136.255f,
+            0.0f,
+            -108.306f
+        };
+
+        homePositions[i] =
             localToBody(
                 static_cast<LegID>(i),
-                reference
+                homeLocal
             );
     }
 
-    bool valid =
-        robot.setAllLegsPosition(targets);
+    robot.setAllLegsPosition(homePositions);
 
-    Serial.println();
-
-    if (valid) {
-        Serial.println("ROBOT POSITION: VALID");
-    } else {
-        Serial.println("ROBOT POSITION: INVALID");
-    }
+    startTime = millis();
 }
 
 void loop() {
-}
+    unsigned long elapsed =
+        millis() - startTime;
+
+    float phase =
+        fmod(
+            elapsed / 1000.0f,
+            STEP_PERIOD
+        ) / STEP_PERIOD;
+
+    Point3D targetBody =
+        calculateTrajectory(
+            homeBody,
+            phase,
+            trajectory
+        );
+
+    Point3D targetLocal =
+        bodyToLocal(
+            LEG_LF,
+            targetBody
+        );
+
+    Serial.print("Body X: ");
+    Serial.print(targetBody.x, 3);
+
+    Serial.print(" Y: ");
+    Serial.print(targetBody.y, 3);
+
+    Serial.print(" Z: ");
+    Serial.println(targetBody.z, 3);
+
+    Serial.print("Local X: ");
+    Serial.print(targetLocal.x, 3);
+
+    Serial.print(" Y: ");
+    Serial.print(targetLocal.y, 3);
+
+    Serial.print(" Z: ");
+    Serial.println(targetLocal.z, 3);
+
+    robot.setLegPosition(
+        LEG_LF,
+        targetBody
+    );
+
+    delay(100);
+    }

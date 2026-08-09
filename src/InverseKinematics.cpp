@@ -18,8 +18,8 @@ IKResult calculateIK(const Point3D& footLocal) {
     const float femur = RobotGeometry::Femur_Length;
     const float tibia = RobotGeometry::Tibia_Length;
 
-    float coxaAngle = -std::atan2(
-        footLocal.y,
+    float coxaAngle = std::atan2(
+        -footLocal.y,
         footLocal.x
     );
 
