@@ -17,13 +17,11 @@ Adafruit_PWMServoDriver* getDriver(uint8_t driver) {
     if (driver == ServoConfig::DRIVER_LEFT) {
         return &pwmLeft;
     }
-
     return &pwmRight;
 }
 
 ServoMotor createServo(LegID leg, ServoJoint joint) {
-    const ServoConfigData& config =
-        ServoConfig::SERVOS[leg][joint];
+    const ServoConfigData& config = ServoConfig::SERVOS[leg][joint];
 
     return ServoMotor(
         getDriver(config.driver),
@@ -66,23 +64,27 @@ ServoMotor tibia[6] = {
 
 RobotController robot(coxa, femur, tibia);
 
+// Lépés paraméterei: Lépéshossz (stride), Lépésmagasság (stepHeight)
 TrajectoryParams trajectory = {
-    40.0f,
-    30.0f
+    80.0f,
+    80.0f
 };
 
-const float STEP_PERIOD = 2.0f;
+const float STEP_PERIOD = 1.4f; // Egy teljes lépésciklus ideje másodpercben
 
-Point3D homeBody =
-    localToBody(
-        LEG_LF,
-        {
-            136.255f,
-            0.0f,
-            -108.306f
-        }
-    );
+// Tripod fáziseltolások a 6 lábra
+// 0.0f = 1. Tripod csoport (LF, LR, RM)
+// 0.5f = 2. Tripod csoport (LM, RF, RR)
+const float LEG_PHASE_OFFSETS[6] = {
+    0.0f, // LEG_LF
+    0.5f, // LEG_LM
+    0.0f, // LEG_LR
+    0.5f, // LEG_RF
+    0.0f, // LEG_RM
+    0.5f  // LEG_RR
+};
 
+Point3D homeBodyPositions[6];
 unsigned long startTime;
 
 void setup() {
@@ -99,72 +101,56 @@ void setup() {
 
     delay(500);
 
-    Point3D homePositions[6];
-
+    // Alapértelmezett kiindulási pozíciók kiszámítása mind a 6 lábra
     for (int i = 0; i < 6; i++) {
         Point3D homeLocal = {
-            136.255f,
+            90.255f,
             0.0f,
-            -108.306f
+            -100.306f
         };
 
-        homePositions[i] =
-            localToBody(
-                static_cast<LegID>(i),
-                homeLocal
-            );
+        homeBodyPositions[i] = localToBody(
+            static_cast<LegID>(i),
+            homeLocal
+        );
     }
 
-    robot.setAllLegsPosition(homePositions);
+    // Állítsuk az összes lábat az alaphelyzetbe
+    robot.setAllLegsPosition(homeBodyPositions);
 
     startTime = millis();
 }
 
 void loop() {
-    unsigned long elapsed =
-        millis() - startTime;
+    unsigned long elapsed = millis() - startTime;
 
-    float phase =
-        fmod(
-            elapsed / 1000.0f,
-            STEP_PERIOD
-        ) / STEP_PERIOD;
+    // Globális fázis [0.0 - 1.0)
+    float globalPhase = fmod(
+        elapsed / 1000.0f,
+        STEP_PERIOD
+    ) / STEP_PERIOD;
 
-    Point3D targetBody =
-        calculateTrajectory(
-            homeBody,
-            phase,
+    // Mind a 6 láb pozíciójának frissítése
+    for (int i = 0; i < 6; i++) {
+        LegID leg = static_cast<LegID>(i);
+
+        // Láb egyedi fázisa az eltolással
+        float legPhase = fmod(
+            globalPhase + LEG_PHASE_OFFSETS[i],
+            1.0f
+        );
+
+        // Célpozíció kiszámítása az adott láb home pozíciójából kiindulva
+        Point3D targetBody = calculateTrajectory(
+            homeBodyPositions[i],
+            legPhase,
             trajectory
         );
 
-    Point3D targetLocal =
-        bodyToLocal(
-            LEG_LF,
-            targetBody
-        );
-
-    Serial.print("Body X: ");
-    Serial.print(targetBody.x, 3);
-
-    Serial.print(" Y: ");
-    Serial.print(targetBody.y, 3);
-
-    Serial.print(" Z: ");
-    Serial.println(targetBody.z, 3);
-
-    Serial.print("Local X: ");
-    Serial.print(targetLocal.x, 3);
-
-    Serial.print(" Y: ");
-    Serial.print(targetLocal.y, 3);
-
-    Serial.print(" Z: ");
-    Serial.println(targetLocal.z, 3);
-
-    robot.setLegPosition(
-        LEG_LF,
-        targetBody
-    );
-
-    delay(100);
+        // Mozgatás végrehajtása
+        robot.setLegPosition(leg, targetBody);
     }
+
+    // Smooth mozgás érdekében csökkentett késleltetés (50 Hz-es frissítés)
+    delay(20);
+}
