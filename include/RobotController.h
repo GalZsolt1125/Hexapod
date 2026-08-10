@@ -5,6 +5,7 @@
 #include "RobotTypes.h"
 #include "InverseKinematics.h"
 #include "ServoMotor.h"
+#include "ServoConfig.h"
 
 class RobotController {
 private:

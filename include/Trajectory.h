@@ -14,7 +14,11 @@ inline Point3D calculateTrajectory(
     float phase,
     const TrajectoryParams& params
 ) {
-    phase = constrain(phase, 0.0f, 1.0f);
+    phase = fmod(phase, 1.0f);
+
+    if (phase < 0.0f) {
+        phase += 1.0f;
+    }
 
     Point3D target = home;
 
@@ -30,8 +34,8 @@ inline Point3D calculateTrajectory(
             home.z +
             params.stepHeight *
             sin(t * MY_PI);
-
-    } else {
+    }
+    else {
         float t = (phase - 0.5f) / 0.5f;
 
         target.y =
