@@ -15,7 +15,9 @@ private:
 
     Point3D legPositions[6];
 
-    float bodyHeightOffset;
+    float bodyOffsetX;
+    float bodyOffsetY;
+    float bodyOffsetZ;
 
 
 public:
@@ -26,7 +28,9 @@ public:
         ServoMotor (&tibia)[6]
     ) {
 
-        bodyHeightOffset = 0.0f;
+        bodyOffsetX = 0.0f;
+        bodyOffsetY = 0.0f;
+        bodyOffsetZ = 0.0f;
 
         for (int i = 0; i < 6; i++) {
 
@@ -35,7 +39,6 @@ public:
             servos[i][JOINT_TIBIA] = &tibia[i];
 
 
-            // Jelenlegi alapértelmezett lábpozíció.
             Point3D defaultLocal = {
                 RobotGeometry::Coxa_Length + 88.038f,
                 0.0f,
@@ -129,22 +132,19 @@ public:
         return true;
     }
 
-    void setBodyHeight(
+    void setBodyX(
         float offset
     ) {
 
-        bodyHeightOffset = offset;
-
+        float delta = offset - bodyOffsetX;
+        bodyOffsetX = offset;
 
         for (int i = 0; i < 6; i++) {
 
             Point3D target =
                 legPositions[i];
 
-            target.z =
-                legPositions[i].z
-                - bodyHeightOffset;
-
+            target.x -= delta;
 
             setLegPosition(
                 static_cast<LegID>(i),
@@ -153,9 +153,72 @@ public:
         }
     }
 
+    void setBodyY(
+        float offset
+    ) {
+
+        float delta = offset - bodyOffsetY;
+        bodyOffsetY = offset;
+
+        for (int i = 0; i < 6; i++) {
+
+            Point3D target =
+                legPositions[i];
+
+            target.y -= delta;
+
+            setLegPosition(
+                static_cast<LegID>(i),
+                target
+            );
+        }
+    }
+
+    void setBodyHeight(
+        float offset
+    ) {
+
+        float delta = offset - bodyOffsetZ;
+        bodyOffsetZ = offset;
+
+        for (int i = 0; i < 6; i++) {
+
+            Point3D target =
+                legPositions[i];
+
+            target.z -= delta;
+
+            setLegPosition(
+                static_cast<LegID>(i),
+                target
+            );
+        }
+    }
+
+    void setBodyOffset(
+        float x,
+        float y,
+        float z
+    ) {
+
+        setBodyX(x);
+        setBodyY(y);
+        setBodyHeight(z);
+    }
+
+    float getBodyX() const {
+
+        return bodyOffsetX;
+    }
+
+    float getBodyY() const {
+
+        return bodyOffsetY;
+    }
+
     float getBodyHeight() const {
 
-        return bodyHeightOffset;
+        return bodyOffsetZ;
     }
 
     Point3D getLegPosition(

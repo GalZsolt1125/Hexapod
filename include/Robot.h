@@ -48,9 +48,27 @@ public:
         LegID leg
     ) const;
 
+    void setBodyX(
+        float offset
+    );
+
+    void setBodyY(
+        float offset
+    );
+
     void setBodyHeight(
         float offset
     );
+
+    void setBodyOffset(
+        float x,
+        float y,
+        float z
+    );
+
+    float getBodyX() const;
+
+    float getBodyY() const;
 
     float getBodyHeight() const;
 };

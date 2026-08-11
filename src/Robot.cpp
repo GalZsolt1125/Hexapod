@@ -253,6 +253,26 @@ Point3D Robot::getLegPosition(
 }
 
 
+void Robot::setBodyX(
+    float offset
+) {
+
+    controller->setBodyX(
+        offset
+    );
+}
+
+
+void Robot::setBodyY(
+    float offset
+) {
+
+    controller->setBodyY(
+        offset
+    );
+}
+
+
 void Robot::setBodyHeight(
     float offset
 ) {
@@ -260,6 +280,32 @@ void Robot::setBodyHeight(
     controller->setBodyHeight(
         offset
     );
+}
+
+
+void Robot::setBodyOffset(
+    float x,
+    float y,
+    float z
+) {
+
+    controller->setBodyOffset(
+        x,
+        y,
+        z
+    );
+}
+
+
+float Robot::getBodyX() const {
+
+    return controller->getBodyX();
+}
+
+
+float Robot::getBodyY() const {
+
+    return controller->getBodyY();
 }
 
 

@@ -1,14 +1,11 @@
 #include <Arduino.h>
+#include <math.h>
 
 #include "Robot.h"
-#include "Gait.h"
 
 Robot robot;
-Gait gait;
 
 Point3D homeBodyPositions[6];
-
-float bodyHeight = -20.0f;
 
 void setup() {
 
@@ -34,62 +31,34 @@ void setup() {
     robot.setAllLegsPosition(
         homeBodyPositions
     );
-
-    robot.setBodyHeight(
-        bodyHeight
-    );
-
-    for (int i = 0; i < 6; i++) {
-
-        homeBodyPositions[i] =
-            robot.getLegPosition(
-                static_cast<LegID>(i)
-            );
-    }
-
-    gait.setHomePositions(
-        homeBodyPositions
-    );
-
-    gait.setType(
-        GaitType::Tripod
-    );
-
-    gait.setStepLength(
-        80.0f
-    );
-
-    gait.setStepHeight(
-        40.0f
-    );
-
-    gait.setStepPeriod(
-        0.8f
-    );
 }
 
 void loop() {
 
-    gait.setMotion(
-        0.0f,
-        1.0f,
-        8.0f
-    );
+    float timeSec = (float)millis() / 1000.0f;
+    float cycleTime = fmod(timeSec, 12.0f);
 
-    float period = 0.8f;
+    if (cycleTime < 4.0f) {
 
-    float phase =
-        fmod(
-            (float)millis()
-            /
-            (period * 1000.0f),
-            1.0f
-        );
+        float phase = (cycleTime / 4.0f) * 2.0f * MY_PI;
+        float xOffset = 30.0f * sin(phase);
 
-    gait.update(
-        robot,
-        phase
-    );
+        robot.setBodyOffset(xOffset, 0.0f, -20.0f);
+
+    } else if (cycleTime < 8.0f) {
+
+        float phase = ((cycleTime - 4.0f) / 4.0f) * 2.0f * MY_PI;
+        float yOffset = 30.0f * sin(phase);
+
+        robot.setBodyOffset(0.0f, yOffset, -20.0f);
+
+    } else {
+
+        float phase = ((cycleTime - 8.0f) / 4.0f) * 2.0f * MY_PI;
+        float zOffset = -20.0f + 15.0f * sin(phase);
+
+        robot.setBodyOffset(0.0f, 0.0f, zOffset);
+    }
 
     delay(20);
 }
