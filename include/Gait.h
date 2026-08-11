@@ -4,10 +4,10 @@
 #include "Robot.h"
 #include "Trajectory.h"
 
-struct GaitParams {
-    float stepPeriod;
-    float stride;
-    float stepHeight;
+enum class GaitType {
+    Tripod,
+    Wave,
+    Dance
 };
 
 class Gait {
@@ -43,7 +43,10 @@ public:
         float rotation
     );
 
-    void update(float timeSeconds);
+    void update(
+        Robot& robot,
+        float phase
+    );
 };
 
 #endif

@@ -18,7 +18,9 @@ void Gait::setHomePositions(
     const Point3D positions[6]
 ) {
     for (int i = 0; i < 6; i++) {
-        LegID leg = static_cast<LegID>(i);
+        homePositions[i] = positions[i];
+    }
+}
 
 void Gait::setType(GaitType type) {
 
