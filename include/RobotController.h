@@ -38,13 +38,11 @@ public:
             servos[i][JOINT_FEMUR] = &femur[i];
             servos[i][JOINT_TIBIA] = &tibia[i];
 
-
             Point3D defaultLocal = {
                 RobotGeometry::Coxa_Length + 88.038f,
                 0.0f,
                 -108.306f
             };
-
 
             legPositions[i] =
                 localToBody(
@@ -59,36 +57,26 @@ public:
         const Point3D& footB
     ) {
 
-        Point3D footLocal =
-            bodyToLocal(leg, footB);
+        legPositions[leg] = footB;
 
+        Point3D adjustedFoot = footB;
+        adjustedFoot.x -= bodyOffsetX;
+        adjustedFoot.y -= bodyOffsetY;
+        adjustedFoot.z -= bodyOffsetZ;
+
+        Point3D footLocal =
+            bodyToLocal(leg, adjustedFoot);
 
         IKResult result =
             calculateIK(footLocal);
-
 
         if (!result.valid) {
             return false;
         }
 
-
-        servos[leg][JOINT_COXA]->setAngle(
-            result.angles.coxa
-        );
-
-
-        servos[leg][JOINT_FEMUR]->setAngle(
-            result.angles.femur
-        );
-
-
-        servos[leg][JOINT_TIBIA]->setAngle(
-            result.angles.tibia
-        );
-
-
-        legPositions[leg] = footB;
-
+        servos[leg][JOINT_COXA]->setAngle(result.angles.coxa);
+        servos[leg][JOINT_FEMUR]->setAngle(result.angles.femur);
+        servos[leg][JOINT_TIBIA]->setAngle(result.angles.tibia);
 
         return true;
     }
@@ -98,19 +86,13 @@ public:
         const Point3D& delta
     ) {
 
-        Point3D target =
-            legPositions[leg];
-
+        Point3D target = legPositions[leg];
 
         target.x += delta.x;
         target.y += delta.y;
         target.z += delta.z;
 
-
-        return setLegPosition(
-            leg,
-            target
-        );
+        return setLegPosition(leg, target);
     }
 
     bool setAllLegsPosition(
@@ -118,113 +100,55 @@ public:
     ) {
 
         for (int i = 0; i < 6; i++) {
-
-            if (!setLegPosition(
-                static_cast<LegID>(i),
-                positions[i]
-            )) {
-
+            if (!setLegPosition(static_cast<LegID>(i), positions[i])) {
                 return false;
             }
         }
 
-
         return true;
     }
 
-    void setBodyX(
-        float offset
-    ) {
-
-        float delta = offset - bodyOffsetX;
+    void setBodyX(float offset) {
         bodyOffsetX = offset;
-
-        for (int i = 0; i < 6; i++) {
-
-            Point3D target =
-                legPositions[i];
-
-            target.x -= delta;
-
-            setLegPosition(
-                static_cast<LegID>(i),
-                target
-            );
-        }
+        refreshLegs();
     }
 
-    void setBodyY(
-        float offset
-    ) {
-
-        float delta = offset - bodyOffsetY;
+    void setBodyY(float offset) {
         bodyOffsetY = offset;
-
-        for (int i = 0; i < 6; i++) {
-
-            Point3D target =
-                legPositions[i];
-
-            target.y -= delta;
-
-            setLegPosition(
-                static_cast<LegID>(i),
-                target
-            );
-        }
+        refreshLegs();
     }
 
-    void setBodyHeight(
-        float offset
-    ) {
-
-        float delta = offset - bodyOffsetZ;
+    void setBodyHeight(float offset) {
         bodyOffsetZ = offset;
-
-        for (int i = 0; i < 6; i++) {
-
-            Point3D target =
-                legPositions[i];
-
-            target.z -= delta;
-
-            setLegPosition(
-                static_cast<LegID>(i),
-                target
-            );
-        }
+        refreshLegs();
     }
 
-    void setBodyOffset(
-        float x,
-        float y,
-        float z
-    ) {
+    void setBodyOffset(float x, float y, float z) {
+        bodyOffsetX = x;
+        bodyOffsetY = y;
+        bodyOffsetZ = z;
+        refreshLegs();
+    }
 
-        setBodyX(x);
-        setBodyY(y);
-        setBodyHeight(z);
+    void refreshLegs() {
+        for (int i = 0; i < 6; i++) {
+            setLegPosition(static_cast<LegID>(i), legPositions[i]);
+        }
     }
 
     float getBodyX() const {
-
         return bodyOffsetX;
     }
 
     float getBodyY() const {
-
         return bodyOffsetY;
     }
 
     float getBodyHeight() const {
-
         return bodyOffsetZ;
     }
 
-    Point3D getLegPosition(
-        LegID leg
-    ) const {
-
+    Point3D getLegPosition(LegID leg) const {
         return legPositions[leg];
     }
 };

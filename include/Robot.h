@@ -30,6 +30,15 @@ private:
     Point3D homeBodyPositions[6];
     float currentStepPeriod;
 
+    bool moving;
+    bool stopRequested;
+    float currentPhase;
+    unsigned long lastUpdateTime;
+
+    float motionX;
+    float motionY;
+    float rotation;
+
 
 public:
 
@@ -37,39 +46,32 @@ public:
 
     void begin();
 
+    void start();
+
+    void stop();
+
+    bool isMoving() const;
 
     bool setLegPosition(
         LegID leg,
         const Point3D& position
     );
 
-
     bool setAllLegsPosition(
         const Point3D positions[6]
     );
-
 
     Point3D getLegPosition(
         LegID leg
     ) const;
 
-    void setBodyX(
-        float offset
-    );
+    void setBodyX(float offset);
 
-    void setBodyY(
-        float offset
-    );
+    void setBodyY(float offset);
 
-    void setBodyHeight(
-        float offset
-    );
+    void setBodyHeight(float offset);
 
-    void setBodyOffset(
-        float x,
-        float y,
-        float z
-    );
+    void setBodyOffset(float x, float y, float z);
 
     float getBodyX() const;
 
@@ -77,27 +79,15 @@ public:
 
     float getBodyHeight() const;
 
-    void setGaitType(
-        GaitType type
-    );
+    void setGaitType(GaitType type);
 
-    void setStepLength(
-        float length
-    );
+    void setStepLength(float length);
 
-    void setStepHeight(
-        float height
-    );
+    void setStepHeight(float height);
 
-    void setStepPeriod(
-        float period
-    );
+    void setStepPeriod(float period);
 
-    void setMotion(
-        float x,
-        float y,
-        float rot
-    );
+    void setMotion(float x, float y, float rot);
 
     void update();
 };

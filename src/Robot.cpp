@@ -3,7 +3,6 @@
 
 namespace {
 
-
 Adafruit_PWMServoDriver* getDriver(
     Adafruit_PWMServoDriver& left,
     Adafruit_PWMServoDriver& right,
@@ -17,7 +16,6 @@ Adafruit_PWMServoDriver* getDriver(
     return &right;
 }
 
-
 ServoMotor createServo(
     Adafruit_PWMServoDriver& left,
     Adafruit_PWMServoDriver& right,
@@ -28,22 +26,13 @@ ServoMotor createServo(
     const ServoConfigData& config =
         ServoConfig::SERVOS[leg][joint];
 
-
     return ServoMotor(
-        getDriver(
-            left,
-            right,
-            config.driver
-        ),
-
+        getDriver(left, right, config.driver),
         config.channel,
-
         150,
         550,
-
         config.offset,
         config.inverted,
-
         config.minAngle,
         config.maxAngle
     );
@@ -85,7 +74,14 @@ Robot::Robot()
       },
 
       controller(nullptr),
-      currentStepPeriod(0.8f)
+      currentStepPeriod(0.8f),
+      moving(false),
+      stopRequested(false),
+      currentPhase(0.0f),
+      lastUpdateTime(0),
+      motionX(0.0f),
+      motionY(0.0f),
+      rotation(0.0f)
 {
 
     controller =
@@ -101,14 +97,11 @@ void Robot::begin() {
 
     Wire.begin();
 
-
     pwmLeft.begin();
     pwmRight.begin();
 
-
     pwmLeft.setPWMFreq(50);
     pwmRight.setPWMFreq(50);
-
 
     delay(500);
 
@@ -134,146 +127,142 @@ void Robot::begin() {
     gait.setStepLength(80.0f);
     gait.setStepHeight(40.0f);
     gait.setStepPeriod(currentStepPeriod);
+
+    lastUpdateTime = millis();
 }
 
 
-bool Robot::setLegPosition(
-    LegID leg,
-    const Point3D& position
-) {
-
-    return controller->setLegPosition(
-        leg,
-        position
-    );
+void Robot::start() {
+    moving = true;
+    stopRequested = false;
 }
 
 
-bool Robot::setAllLegsPosition(
-    const Point3D positions[6]
-) {
-
-    return controller->setAllLegsPosition(
-        positions
-    );
+void Robot::stop() {
+    if (moving) {
+        stopRequested = true;
+    }
 }
 
 
-Point3D Robot::getLegPosition(
-    LegID leg
-) const {
-
-    return controller->getLegPosition(
-        leg
-    );
+bool Robot::isMoving() const {
+    return moving;
 }
 
 
-void Robot::setBodyX(
-    float offset
-) {
-
-    controller->setBodyX(
-        offset
-    );
+bool Robot::setLegPosition(LegID leg, const Point3D& position) {
+    return controller->setLegPosition(leg, position);
 }
 
 
-void Robot::setBodyY(
-    float offset
-) {
-
-    controller->setBodyY(
-        offset
-    );
+bool Robot::setAllLegsPosition(const Point3D positions[6]) {
+    return controller->setAllLegsPosition(positions);
 }
 
 
-void Robot::setBodyHeight(
-    float offset
-) {
-
-    controller->setBodyHeight(
-        offset
-    );
+Point3D Robot::getLegPosition(LegID leg) const {
+    return controller->getLegPosition(leg);
 }
 
 
-void Robot::setBodyOffset(
-    float x,
-    float y,
-    float z
-) {
+void Robot::setBodyX(float offset) {
+    controller->setBodyX(offset);
+}
 
-    controller->setBodyOffset(
-        x,
-        y,
-        z
-    );
+
+void Robot::setBodyY(float offset) {
+    controller->setBodyY(offset);
+}
+
+
+void Robot::setBodyHeight(float offset) {
+    controller->setBodyHeight(offset);
+}
+
+
+void Robot::setBodyOffset(float x, float y, float z) {
+    controller->setBodyOffset(x, y, z);
 }
 
 
 float Robot::getBodyX() const {
-
     return controller->getBodyX();
 }
 
 
 float Robot::getBodyY() const {
-
     return controller->getBodyY();
 }
 
 
 float Robot::getBodyHeight() const {
-
     return controller->getBodyHeight();
 }
 
 
 void Robot::setGaitType(GaitType type) {
-
     gait.setType(type);
 }
 
 
 void Robot::setStepLength(float length) {
-
     gait.setStepLength(length);
 }
 
 
 void Robot::setStepHeight(float height) {
-
     gait.setStepHeight(height);
 }
 
 
 void Robot::setStepPeriod(float period) {
-
     currentStepPeriod = period;
     gait.setStepPeriod(period);
 }
 
 
 void Robot::setMotion(float x, float y, float rot) {
-
-    gait.setMotion(x, y, rot);
+    motionX = x;
+    motionY = y;
+    rotation = rot;
 }
 
 
 void Robot::update() {
 
-    float phase =
-        fmod(
-            (float)millis()
-            /
-            (currentStepPeriod * 1000.0f),
-            1.0f
-        );
+    unsigned long now = millis();
+    float dt = (now - lastUpdateTime) / 1000.0f;
+    lastUpdateTime = now;
 
-    gait.update(
-        *this,
-        phase
-    );
+    if (dt <= 0.0f || dt > 0.5f) {
+        dt = 0.02f;
+    }
+
+    if (moving) {
+
+        currentPhase += dt / currentStepPeriod;
+
+        if (currentPhase >= 1.0f) {
+            currentPhase = fmod(currentPhase, 1.0f);
+
+            if (stopRequested) {
+                moving = false;
+                stopRequested = false;
+                currentPhase = 0.0f;
+            }
+        }
+
+        if (stopRequested) {
+            gait.setMotion(0.0f, 0.0f, 0.0f);
+        } else {
+            gait.setMotion(motionX, motionY, rotation);
+        }
+
+        gait.update(*this, currentPhase);
+
+    } else {
+
+        gait.setMotion(0.0f, 0.0f, 0.0f);
+        gait.update(*this, 0.0f);
+    }
 }
