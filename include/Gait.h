@@ -1,8 +1,7 @@
 #ifndef GAIT_H
 #define GAIT_H
 
-#include "RobotGeometry.h"
-#include "RobotController.h"
+#include "Robot.h"
 #include "Trajectory.h"
 
 struct GaitParams {
@@ -13,17 +12,35 @@ struct GaitParams {
 
 class Gait {
 private:
-    RobotController& robot;
-    GaitParams params;
     Point3D homePositions[6];
+
+    GaitType gaitType = GaitType::Tripod;
+
+    float stepLength = 80.0f;
+    float stepHeight = 40.0f;
+    float stepPeriod = 1.0f;
+
+    float motionX = 0.0f;
+    float motionY = 0.0f;
+    float rotation = 0.0f;
 
     float phaseOffsets[6];
 
 public:
-    Gait(
-        RobotController& controller,
-        const GaitParams& gaitParams,
-        const Point3D homes[6]
+    Gait();
+
+    void setHomePositions(const Point3D positions[6]);
+
+    void setType(GaitType type);
+
+    void setStepLength(float length);
+    void setStepHeight(float height);
+    void setStepPeriod(float period);
+
+    void setMotion(
+        float x,
+        float y,
+        float rotation
     );
 
     void update(float timeSeconds);
