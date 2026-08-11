@@ -58,141 +58,34 @@ Robot::Robot()
       pwmRight(0x41),
 
       coxa{
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_LF,
-              JOINT_COXA
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_LM,
-              JOINT_COXA
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_LR,
-              JOINT_COXA
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_RF,
-              JOINT_COXA
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_RM,
-              JOINT_COXA
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_RR,
-              JOINT_COXA
-          )
+          createServo(pwmLeft, pwmRight, LEG_LF, JOINT_COXA),
+          createServo(pwmLeft, pwmRight, LEG_LM, JOINT_COXA),
+          createServo(pwmLeft, pwmRight, LEG_LR, JOINT_COXA),
+          createServo(pwmLeft, pwmRight, LEG_RF, JOINT_COXA),
+          createServo(pwmLeft, pwmRight, LEG_RM, JOINT_COXA),
+          createServo(pwmLeft, pwmRight, LEG_RR, JOINT_COXA)
       },
-
 
       femur{
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_LF,
-              JOINT_FEMUR
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_LM,
-              JOINT_FEMUR
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_LR,
-              JOINT_FEMUR
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_RF,
-              JOINT_FEMUR
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_RM,
-              JOINT_FEMUR
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_RR,
-              JOINT_FEMUR
-          )
+          createServo(pwmLeft, pwmRight, LEG_LF, JOINT_FEMUR),
+          createServo(pwmLeft, pwmRight, LEG_LM, JOINT_FEMUR),
+          createServo(pwmLeft, pwmRight, LEG_LR, JOINT_FEMUR),
+          createServo(pwmLeft, pwmRight, LEG_RF, JOINT_FEMUR),
+          createServo(pwmLeft, pwmRight, LEG_RM, JOINT_FEMUR),
+          createServo(pwmLeft, pwmRight, LEG_RR, JOINT_FEMUR)
       },
-
 
       tibia{
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_LF,
-              JOINT_TIBIA
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_LM,
-              JOINT_TIBIA
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_LR,
-              JOINT_TIBIA
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_RF,
-              JOINT_TIBIA
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_RM,
-              JOINT_TIBIA
-          ),
-
-          createServo(
-              pwmLeft,
-              pwmRight,
-              LEG_RR,
-              JOINT_TIBIA
-          )
+          createServo(pwmLeft, pwmRight, LEG_LF, JOINT_TIBIA),
+          createServo(pwmLeft, pwmRight, LEG_LM, JOINT_TIBIA),
+          createServo(pwmLeft, pwmRight, LEG_LR, JOINT_TIBIA),
+          createServo(pwmLeft, pwmRight, LEG_RF, JOINT_TIBIA),
+          createServo(pwmLeft, pwmRight, LEG_RM, JOINT_TIBIA),
+          createServo(pwmLeft, pwmRight, LEG_RR, JOINT_TIBIA)
       },
 
-
-      controller(nullptr)
+      controller(nullptr),
+      currentStepPeriod(0.8f)
 {
 
     controller =
@@ -218,6 +111,29 @@ void Robot::begin() {
 
 
     delay(500);
+
+    for (int i = 0; i < 6; i++) {
+
+        Point3D homeLocal = {
+            95.255f,
+            0.0f,
+            -146.306f
+        };
+
+        homeBodyPositions[i] =
+            localToBody(
+                static_cast<LegID>(i),
+                homeLocal
+            );
+    }
+
+    setAllLegsPosition(homeBodyPositions);
+
+    gait.setHomePositions(homeBodyPositions);
+    gait.setType(GaitType::Tripod);
+    gait.setStepLength(80.0f);
+    gait.setStepHeight(40.0f);
+    gait.setStepPeriod(currentStepPeriod);
 }
 
 
@@ -312,4 +228,52 @@ float Robot::getBodyY() const {
 float Robot::getBodyHeight() const {
 
     return controller->getBodyHeight();
+}
+
+
+void Robot::setGaitType(GaitType type) {
+
+    gait.setType(type);
+}
+
+
+void Robot::setStepLength(float length) {
+
+    gait.setStepLength(length);
+}
+
+
+void Robot::setStepHeight(float height) {
+
+    gait.setStepHeight(height);
+}
+
+
+void Robot::setStepPeriod(float period) {
+
+    currentStepPeriod = period;
+    gait.setStepPeriod(period);
+}
+
+
+void Robot::setMotion(float x, float y, float rot) {
+
+    gait.setMotion(x, y, rot);
+}
+
+
+void Robot::update() {
+
+    float phase =
+        fmod(
+            (float)millis()
+            /
+            (currentStepPeriod * 1000.0f),
+            1.0f
+        );
+
+    gait.update(
+        *this,
+        phase
+    );
 }

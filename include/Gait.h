@@ -1,8 +1,10 @@
 #ifndef GAIT_H
 #define GAIT_H
 
-#include "Robot.h"
+#include "RobotGeometry.h"
 #include "Trajectory.h"
+
+class Robot;
 
 enum class GaitType {
     Tripod,

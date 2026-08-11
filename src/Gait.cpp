@@ -1,10 +1,10 @@
 #include "Gait.h"
+#include "Robot.h"
 #include <Arduino.h>
 #include <math.h>
 
 Gait::Gait() {
 
-    // Tripod alapértelmezett
     phaseOffsets[LEG_LF] = 0.00f;
     phaseOffsets[LEG_LM] = 0.50f;
     phaseOffsets[LEG_LR] = 0.00f;

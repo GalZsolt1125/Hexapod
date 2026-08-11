@@ -10,6 +10,7 @@
 #include "ServoMotor.h"
 #include "ServoConfig.h"
 #include "RobotController.h"
+#include "Gait.h"
 
 
 class Robot {
@@ -24,6 +25,10 @@ private:
     ServoMotor tibia[6];
 
     RobotController* controller;
+    Gait gait;
+
+    Point3D homeBodyPositions[6];
+    float currentStepPeriod;
 
 
 public:
@@ -71,6 +76,30 @@ public:
     float getBodyY() const;
 
     float getBodyHeight() const;
+
+    void setGaitType(
+        GaitType type
+    );
+
+    void setStepLength(
+        float length
+    );
+
+    void setStepHeight(
+        float height
+    );
+
+    void setStepPeriod(
+        float period
+    );
+
+    void setMotion(
+        float x,
+        float y,
+        float rot
+    );
+
+    void update();
 };
 
 #endif
