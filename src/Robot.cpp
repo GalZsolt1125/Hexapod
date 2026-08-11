@@ -145,6 +145,13 @@ void Robot::stop() {
 }
 
 
+void Robot::calibration() {
+    moving = false;
+    stopRequested = false;
+    controller->calibration();
+}
+
+
 bool Robot::isMoving() const {
     return moving;
 }

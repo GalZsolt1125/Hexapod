@@ -136,6 +136,14 @@ public:
         }
     }
 
+    void calibration() {
+        for (int i = 0; i < 6; i++) {
+            servos[i][JOINT_COXA]->setAngle(0.0f);
+            servos[i][JOINT_FEMUR]->setAngle(0.0f);
+            servos[i][JOINT_TIBIA]->setAngle(0.0f);
+        }
+    }
+
     float getBodyX() const {
         return bodyOffsetX;
     }

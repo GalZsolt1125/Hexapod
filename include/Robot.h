@@ -50,6 +50,8 @@ public:
 
     void stop();
 
+    void calibration();
+
     bool isMoving() const;
 
     bool setLegPosition(
