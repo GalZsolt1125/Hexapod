@@ -119,10 +119,16 @@ void setup() {
 }
 
 void loop() {
-    float timeSeconds =
-        (millis() - startTime) / 1000.0f;
+    gait.setMotion(
+        0.0f,
+        1.0f,
+        8.0f
+    );
 
-    gait->update(timeSeconds);
+    float period = 0.8f;
+    float phase = fmod((float)millis() / (period * 1000.0f), 1.0f);
+
+    gait.update(robot, phase);
 
     delay(20);
 }
