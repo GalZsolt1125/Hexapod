@@ -46,7 +46,7 @@ const ServoConfigData SERVOS[6][3] = {
     {
         { DRIVER_LEFT, 8,  8.0f, false,  DEFAULT_MIN, DEFAULT_MAX },
         { DRIVER_LEFT, 9, -5.0f, true,  DEFAULT_MIN, DEFAULT_MAX },
-        { DRIVER_LEFT, 10, 0.0f, true,  DEFAULT_MIN, DEFAULT_MAX }
+        { DRIVER_LEFT, 10, -6.0f, true,  DEFAULT_MIN, DEFAULT_MAX }
     },
 
     {
