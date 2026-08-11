@@ -11,8 +11,11 @@
 #include "ServoConfig.h"
 #include "RobotController.h"
 
+
 class Robot {
+
 private:
+
     Adafruit_PWMServoDriver pwmLeft;
     Adafruit_PWMServoDriver pwmRight;
 
@@ -22,21 +25,34 @@ private:
 
     RobotController* controller;
 
+
 public:
+
     Robot();
 
     void begin();
+
 
     bool setLegPosition(
         LegID leg,
         const Point3D& position
     );
 
+
     bool setAllLegsPosition(
         const Point3D positions[6]
     );
 
-    Point3D getLegPosition(LegID leg) const;
+
+    Point3D getLegPosition(
+        LegID leg
+    ) const;
+
+    void setBodyHeight(
+        float offset
+    );
+
+    float getBodyHeight() const;
 };
 
 #endif
