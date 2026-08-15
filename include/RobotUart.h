@@ -2,6 +2,7 @@
 #define ROBOT_UART_H
 
 #include <Arduino.h>
+
 #include "RobotProtocol.h"
 #include "Robot.h"
 
@@ -32,13 +33,25 @@ private:
         READ_CRC
     };
 
-    bool parseByte(uint8_t byte);
+    bool parseByte(
+        uint8_t byte
+    );
 
     void resetParser();
 
     void executeCommand();
 
-    bool readFloatPayload(float& value);
+    void sendStatus();
+
+    bool readFloatPayload(
+        float& value
+    );
+
+    void sendPacket(
+        RobotProtocol::CommandType type,
+        const uint8_t* payload,
+        uint8_t length
+    );
 
     HardwareSerial& _serial;
     Robot& _robot;
@@ -49,10 +62,15 @@ private:
     uint8_t _seq = 0;
     uint8_t _length = 0;
 
-    uint8_t _payload[RobotProtocol::MAX_PAYLOAD_SIZE];
+    uint8_t _payload[
+        RobotProtocol::MAX_PAYLOAD_SIZE
+    ];
+
     uint8_t _payloadIndex = 0;
 
     uint8_t _receivedCrc = 0;
+
+    uint8_t _txSequence = 0;
 
     uint32_t _lastValidPacketTime = 0;
 

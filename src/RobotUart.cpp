@@ -1,5 +1,7 @@
 #include "RobotUart.h"
 
+#include <cstring>
+
 using namespace RobotProtocol;
 
 RobotUart::RobotUart(
@@ -18,6 +20,8 @@ void RobotUart::begin()
     _lastValidPacketTime = millis();
 
     _failsafeActive = false;
+
+    _txSequence = 0;
 }
 
 void RobotUart::update()
@@ -31,7 +35,8 @@ void RobotUart::update()
 
     if (
         !_failsafeActive &&
-        (millis() - _lastValidPacketTime > FAILSAFE_TIMEOUT_MS)
+        (millis() - _lastValidPacketTime >
+         FAILSAFE_TIMEOUT_MS)
     ) {
 
         _robot.stop();
@@ -51,12 +56,12 @@ bool RobotUart::parseByte(uint8_t byte)
         case ParserState::WAIT_HEADER:
 
             if (byte == FRAME_HEADER) {
-
                 _state = ParserState::READ_TYPE;
             }
 
             break;
-        
+
+
         case ParserState::READ_TYPE:
 
             if (!isValidCommandType(byte)) {
@@ -72,6 +77,7 @@ bool RobotUart::parseByte(uint8_t byte)
 
             break;
 
+
         case ParserState::READ_SEQ:
 
             _seq = byte;
@@ -79,6 +85,7 @@ bool RobotUart::parseByte(uint8_t byte)
             _state = ParserState::READ_LENGTH;
 
             break;
+
 
         case ParserState::READ_LENGTH:
 
@@ -104,6 +111,7 @@ bool RobotUart::parseByte(uint8_t byte)
 
             break;
 
+
         case ParserState::READ_PAYLOAD:
 
             _payload[_payloadIndex++] = byte;
@@ -115,52 +123,50 @@ bool RobotUart::parseByte(uint8_t byte)
 
             break;
 
-        case ParserState::READ_CRC:
 
+        case ParserState::READ_CRC:
+        {
             _receivedCrc = byte;
 
-            {
+            uint8_t crcData[
+                3 + MAX_PAYLOAD_SIZE
+            ];
 
-                uint8_t crcData[
-                    3 + MAX_PAYLOAD_SIZE
-                ];
+            crcData[0] = _type;
+            crcData[1] = _seq;
+            crcData[2] = _length;
 
-                crcData[0] = _type;
-                crcData[1] = _seq;
-                crcData[2] = _length;
-
-                for (uint8_t i = 0; i < _length; i++) {
-
-                    crcData[3 + i] = _payload[i];
-                }
-
-                uint8_t calculatedCrc =
-                    crc8(
-                        crcData,
-                        3 + _length
-                    );
-
-                if (calculatedCrc == _receivedCrc) {
-
-                    _lastValidPacketTime = millis();
-
-                    _failsafeActive = false;
-
-                    executeCommand();
-
-                    resetParser();
-
-                    return true;
-                }
-
-                Serial.println(
-                    "[UART] CRC ERROR"
-                );
-
-                resetParser();
+            for (uint8_t i = 0; i < _length; i++) {
+                crcData[3 + i] = _payload[i];
             }
 
+            uint8_t calculatedCrc =
+                crc8(
+                    crcData,
+                    3 + _length
+                );
+
+            if (calculatedCrc == _receivedCrc) {
+
+                _lastValidPacketTime = millis();
+
+                _failsafeActive = false;
+
+                executeCommand();
+
+                resetParser();
+
+                return true;
+            }
+
+            Serial.println(
+                "[UART] CRC ERROR"
+            );
+
+            resetParser();
+
             break;
+        }
     }
 
     return false;
@@ -176,6 +182,25 @@ void RobotUart::resetParser()
 
     _payloadIndex = 0;
     _receivedCrc = 0;
+}
+
+bool RobotUart::readFloatPayload(float& value)
+{
+    if (_length != sizeof(FloatPayload)) {
+        return false;
+    }
+
+    FloatPayload payload;
+
+    memcpy(
+        &payload,
+        _payload,
+        sizeof(FloatPayload)
+    );
+
+    value = payload.value;
+
+    return true;
 }
 
 void RobotUart::executeCommand()
@@ -199,6 +224,7 @@ void RobotUart::executeCommand()
 
             break;
 
+
         case CommandType::STOP:
 
             if (_length != 0) {
@@ -213,299 +239,243 @@ void RobotUart::executeCommand()
 
             break;
 
-        case CommandType::SET_MOTION:
 
+        case CommandType::SET_MOTION:
+        {
             if (_length != sizeof(MotionPayload)) {
                 return;
             }
 
-            {
+            MotionPayload payload;
 
-                MotionPayload payload;
+            memcpy(
+                &payload,
+                _payload,
+                sizeof(MotionPayload)
+            );
 
-                memcpy(
-                    &payload,
-                    _payload,
-                    sizeof(MotionPayload)
-                );
+            _robot.setMotion(
+                payload.x,
+                payload.y,
+                payload.rot
+            );
 
-                _robot.setMotion(
-                    payload.x,
-                    payload.y,
-                    payload.rot
-                );
-
-                Serial.printf(
-                    "[UART] MOTION x=%.3f y=%.3f rot=%.3f\n",
-                    payload.x,
-                    payload.y,
-                    payload.rot
-                );
-            }
+            Serial.printf(
+                "[UART] MOTION x=%.3f y=%.3f rot=%.3f\n",
+                payload.x,
+                payload.y,
+                payload.rot
+            );
 
             break;
+        }
+
 
         case CommandType::SET_BODY_X:
+        {
+            float value;
 
-            if (_length != sizeof(FloatPayload)) {
+            if (!readFloatPayload(value)) {
                 return;
             }
 
-            {
+            _robot.setBodyX(value);
 
-                FloatPayload payload;
-
-                memcpy(
-                    &payload,
-                    _payload,
-                    sizeof(FloatPayload)
-                );
-
-                _robot.setBodyX(
-                    payload.value
-                );
-
-                Serial.printf(
-                    "[UART] BODY X = %.2f\n",
-                    payload.value
-                );
-            }
+            Serial.printf(
+                "[UART] BODY X = %.2f\n",
+                value
+            );
 
             break;
+        }
+
 
         case CommandType::SET_BODY_Y:
+        {
+            float value;
 
-            if (_length != sizeof(FloatPayload)) {
+            if (!readFloatPayload(value)) {
                 return;
             }
 
-            {
+            _robot.setBodyY(value);
 
-                FloatPayload payload;
-
-                memcpy(
-                    &payload,
-                    _payload,
-                    sizeof(FloatPayload)
-                );
-
-                _robot.setBodyY(
-                    payload.value
-                );
-
-                Serial.printf(
-                    "[UART] BODY Y = %.2f\n",
-                    payload.value
-                );
-            }
+            Serial.printf(
+                "[UART] BODY Y = %.2f\n",
+                value
+            );
 
             break;
+        }
+
 
         case CommandType::SET_BODY_HEIGHT:
+        {
+            float value;
 
-            if (_length != sizeof(FloatPayload)) {
+            if (!readFloatPayload(value)) {
                 return;
             }
 
-            {
+            _robot.setBodyHeight(value);
 
-                FloatPayload payload;
-
-                memcpy(
-                    &payload,
-                    _payload,
-                    sizeof(FloatPayload)
-                );
-
-                _robot.setBodyHeight(
-                    payload.value
-                );
-
-                Serial.printf(
-                    "[UART] BODY HEIGHT = %.2f\n",
-                    payload.value
-                );
-            }
+            Serial.printf(
+                "[UART] BODY HEIGHT = %.2f\n",
+                value
+            );
 
             break;
+        }
+
 
         case CommandType::SET_BODY_OFFSET:
-
+        {
             if (_length != sizeof(BodyOffsetPayload)) {
                 return;
             }
 
-            {
+            BodyOffsetPayload payload;
 
-                BodyOffsetPayload payload;
+            memcpy(
+                &payload,
+                _payload,
+                sizeof(BodyOffsetPayload)
+            );
 
-                memcpy(
-                    &payload,
-                    _payload,
-                    sizeof(BodyOffsetPayload)
-                );
+            _robot.setBodyOffset(
+                payload.x,
+                payload.y,
+                payload.z
+            );
 
-                _robot.setBodyOffset(
-                    payload.x,
-                    payload.y,
-                    payload.z
-                );
-
-                Serial.printf(
-                    "[UART] BODY OFFSET %.2f %.2f %.2f\n",
-                    payload.x,
-                    payload.y,
-                    payload.z
-                );
-            }
+            Serial.printf(
+                "[UART] BODY OFFSET %.2f %.2f %.2f\n",
+                payload.x,
+                payload.y,
+                payload.z
+            );
 
             break;
+        }
+
 
         case CommandType::SET_GAIT:
-
+        {
             if (_length != sizeof(GaitPayload)) {
                 return;
             }
 
-            {
+            GaitPayload payload;
 
-                GaitPayload payload;
+            memcpy(
+                &payload,
+                _payload,
+                sizeof(GaitPayload)
+            );
 
-                memcpy(
-                    &payload,
-                    _payload,
-                    sizeof(GaitPayload)
-                );
-
-                switch (
-                    static_cast<GaitTypeWire>(
-                        payload.type
-                    )
-                ) {
-
-                    case GaitTypeWire::TRIPOD:
-
-                        _robot.setGaitType(
-                            GaitType::Tripod
-                        );
-
-                        break;
-
-
-                    case GaitTypeWire::WAVE:
-
-                        _robot.setGaitType(
-                            GaitType::Wave
-                        );
-
-                        break;
-
-
-                    case GaitTypeWire::DANCE:
-
-                        _robot.setGaitType(
-                            GaitType::Dance
-                        );
-
-                        break;
-
-
-                    default:
-
-                        return;
-                }
-
-                Serial.printf(
-                    "[UART] GAIT = %u\n",
+            switch (
+                static_cast<GaitTypeWire>(
                     payload.type
-                );
+                )
+            ) {
+
+                case GaitTypeWire::TRIPOD:
+
+                    _robot.setGaitType(
+                        GaitType::Tripod
+                    );
+
+                    break;
+
+
+                case GaitTypeWire::WAVE:
+
+                    _robot.setGaitType(
+                        GaitType::Wave
+                    );
+
+                    break;
+
+
+                case GaitTypeWire::DANCE:
+
+                    _robot.setGaitType(
+                        GaitType::Dance
+                    );
+
+                    break;
+
+
+                default:
+
+                    return;
             }
 
+            Serial.printf(
+                "[UART] GAIT = %u\n",
+                payload.type
+            );
+
             break;
+        }
+
 
         case CommandType::SET_STEP_LENGTH:
+        {
+            float value;
 
-            if (_length != sizeof(FloatPayload)) {
+            if (!readFloatPayload(value)) {
                 return;
             }
 
-            {
+            _robot.setStepLength(value);
 
-                FloatPayload payload;
-
-                memcpy(
-                    &payload,
-                    _payload,
-                    sizeof(FloatPayload)
-                );
-
-                _robot.setStepLength(
-                    payload.value
-                );
-
-                Serial.printf(
-                    "[UART] STEP LENGTH = %.2f\n",
-                    payload.value
-                );
-            }
+            Serial.printf(
+                "[UART] STEP LENGTH = %.2f\n",
+                value
+            );
 
             break;
-        
+        }
+
+
         case CommandType::SET_STEP_HEIGHT:
+        {
+            float value;
 
-            if (_length != sizeof(FloatPayload)) {
+            if (!readFloatPayload(value)) {
                 return;
             }
 
-            {
+            _robot.setStepHeight(value);
 
-                FloatPayload payload;
-
-                memcpy(
-                    &payload,
-                    _payload,
-                    sizeof(FloatPayload)
-                );
-
-                _robot.setStepHeight(
-                    payload.value
-                );
-
-                Serial.printf(
-                    "[UART] STEP HEIGHT = %.2f\n",
-                    payload.value
-                );
-            }
+            Serial.printf(
+                "[UART] STEP HEIGHT = %.2f\n",
+                value
+            );
 
             break;
+        }
+
 
         case CommandType::SET_STEP_PERIOD:
+        {
+            float value;
 
-            if (_length != sizeof(FloatPayload)) {
+            if (!readFloatPayload(value)) {
                 return;
             }
 
-            {
+            _robot.setStepPeriod(value);
 
-                FloatPayload payload;
-
-                memcpy(
-                    &payload,
-                    _payload,
-                    sizeof(FloatPayload)
-                );
-
-                _robot.setStepPeriod(
-                    payload.value
-                );
-
-                Serial.printf(
-                    "[UART] STEP PERIOD = %.3f\n",
-                    payload.value
-                );
-            }
+            Serial.printf(
+                "[UART] STEP PERIOD = %.3f\n",
+                value
+            );
 
             break;
+        }
+
 
         case CommandType::CALIBRATION:
 
@@ -521,20 +491,86 @@ void RobotUart::executeCommand()
 
             break;
 
+
         case CommandType::GET_STATUS:
 
             if (_length != 0) {
                 return;
             }
 
-            Serial.println(
-                "[UART] GET STATUS"
-            );
+            sendStatus();
 
             break;
+
 
         case CommandType::STATUS:
 
             break;
     }
+}
+
+void RobotUart::sendPacket(
+    CommandType type,
+    const uint8_t* payload,
+    uint8_t length
+)
+{
+    if (length > MAX_PAYLOAD_SIZE) {
+        return;
+    }
+
+    uint8_t sequence = _txSequence++;
+
+    uint8_t crcData[
+        3 + MAX_PAYLOAD_SIZE
+    ];
+
+    crcData[0] =
+        static_cast<uint8_t>(type);
+
+    crcData[1] = sequence;
+    crcData[2] = length;
+
+    for (uint8_t i = 0; i < length; i++) {
+        crcData[3 + i] = payload[i];
+    }
+
+    uint8_t crc =
+        crc8(
+            crcData,
+            3 + length
+        );
+
+    _serial.write(FRAME_HEADER);
+
+    _serial.write(
+        static_cast<uint8_t>(type)
+    );
+
+    _serial.write(sequence);
+
+    _serial.write(length);
+
+    if (length > 0) {
+        _serial.write(
+            payload,
+            length
+        );
+    }
+
+    _serial.write(crc);
+}
+
+void RobotUart::sendStatus()
+{
+    uint8_t payload[1];
+
+    payload[0] =
+        _robot.isMoving() ? 1 : 0;
+
+    sendPacket(
+        CommandType::STATUS,
+        payload,
+        sizeof(payload)
+    );
 }

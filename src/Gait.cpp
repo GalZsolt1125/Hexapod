@@ -1,10 +1,12 @@
 #include "Gait.h"
+
 #include "Robot.h"
+
 #include <Arduino.h>
 #include <math.h>
 
-Gait::Gait() {
-
+Gait::Gait()
+{
     phaseOffsets[LEG_LF] = 0.00f;
     phaseOffsets[LEG_LM] = 0.50f;
     phaseOffsets[LEG_LR] = 0.00f;
@@ -22,8 +24,9 @@ void Gait::setHomePositions(
     }
 }
 
-void Gait::setType(GaitType type) {
-
+void Gait::setType(
+    GaitType type
+) {
     gaitType = type;
 
     if (type == GaitType::Tripod) {
@@ -60,15 +63,21 @@ void Gait::setType(GaitType type) {
     }
 }
 
-void Gait::setStepLength(float length) {
+void Gait::setStepLength(
+    float length
+) {
     stepLength = length;
 }
 
-void Gait::setStepHeight(float height) {
+void Gait::setStepHeight(
+    float height
+) {
     stepHeight = height;
 }
 
-void Gait::setStepPeriod(float period) {
+void Gait::setStepPeriod(
+    float period
+) {
     stepPeriod = period;
 }
 

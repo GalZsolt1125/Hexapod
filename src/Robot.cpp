@@ -1,6 +1,5 @@
 #include "Robot.h"
 
-
 namespace {
 
 Adafruit_PWMServoDriver* getDriver(
@@ -8,7 +7,6 @@ Adafruit_PWMServoDriver* getDriver(
     Adafruit_PWMServoDriver& right,
     uint8_t driver
 ) {
-
     if (driver == ServoConfig::DRIVER_LEFT) {
         return &left;
     }
@@ -22,7 +20,6 @@ ServoMotor createServo(
     LegID leg,
     ServoJoint joint
 ) {
-
     const ServoConfigData& config =
         ServoConfig::SERVOS[leg][joint];
 
@@ -39,7 +36,6 @@ ServoMotor createServo(
 }
 
 }
-
 
 Robot::Robot()
 
@@ -83,7 +79,6 @@ Robot::Robot()
       motionY(0.0f),
       rotation(0.0f)
 {
-
     controller =
         new RobotController(
             coxa,
@@ -92,9 +87,8 @@ Robot::Robot()
         );
 }
 
-
-void Robot::begin() {
-
+void Robot::begin()
+{
     Wire.begin();
 
     pwmLeft.begin();
@@ -123,7 +117,9 @@ void Robot::begin() {
     setAllLegsPosition(homeBodyPositions);
 
     gait.setHomePositions(homeBodyPositions);
+
     gait.setType(GaitType::Tripod);
+
     gait.setStepLength(80.0f);
     gait.setStepHeight(40.0f);
     gait.setStepPeriod(currentStepPeriod);
@@ -131,114 +127,139 @@ void Robot::begin() {
     lastUpdateTime = millis();
 }
 
-
-void Robot::start() {
+void Robot::start()
+{
     moving = true;
     stopRequested = false;
 }
 
-
-void Robot::stop() {
+void Robot::stop()
+{
     if (moving) {
         stopRequested = true;
     }
 }
 
-
-void Robot::calibration() {
+void Robot::calibration()
+{
     moving = false;
     stopRequested = false;
+
     controller->calibration();
 }
 
-
-bool Robot::isMoving() const {
+bool Robot::isMoving() const
+{
     return moving;
 }
 
-
-bool Robot::setLegPosition(LegID leg, const Point3D& position) {
-    return controller->setLegPosition(leg, position);
+bool Robot::setLegPosition(
+    LegID leg,
+    const Point3D& position
+) {
+    return controller->setLegPosition(
+        leg,
+        position
+    );
 }
 
-
-bool Robot::setAllLegsPosition(const Point3D positions[6]) {
-    return controller->setAllLegsPosition(positions);
+bool Robot::setAllLegsPosition(
+    const Point3D positions[6]
+) {
+    return controller->setAllLegsPosition(
+        positions
+    );
 }
 
-
-Point3D Robot::getLegPosition(LegID leg) const {
-    return controller->getLegPosition(leg);
+Point3D Robot::getLegPosition(
+    LegID leg
+) const {
+    return controller->getLegPosition(
+        leg
+    );
 }
 
-
-void Robot::setBodyX(float offset) {
+void Robot::setBodyX(float offset)
+{
     controller->setBodyX(offset);
 }
 
-
-void Robot::setBodyY(float offset) {
+void Robot::setBodyY(float offset)
+{
     controller->setBodyY(offset);
 }
 
-
-void Robot::setBodyHeight(float offset) {
+void Robot::setBodyHeight(float offset)
+{
     controller->setBodyHeight(offset);
 }
 
-
-void Robot::setBodyOffset(float x, float y, float z) {
-    controller->setBodyOffset(x, y, z);
+void Robot::setBodyOffset(
+    float x,
+    float y,
+    float z
+) {
+    controller->setBodyOffset(
+        x,
+        y,
+        z
+    );
 }
 
-
-float Robot::getBodyX() const {
+float Robot::getBodyX() const
+{
     return controller->getBodyX();
 }
 
-
-float Robot::getBodyY() const {
+float Robot::getBodyY() const
+{
     return controller->getBodyY();
 }
 
-
-float Robot::getBodyHeight() const {
+float Robot::getBodyHeight() const
+{
     return controller->getBodyHeight();
 }
 
-
-void Robot::setGaitType(GaitType type) {
+void Robot::setGaitType(GaitType type)
+{
     gait.setType(type);
 }
 
-
-void Robot::setStepLength(float length) {
+void Robot::setStepLength(float length)
+{
     gait.setStepLength(length);
 }
 
-
-void Robot::setStepHeight(float height) {
+void Robot::setStepHeight(float height)
+{
     gait.setStepHeight(height);
 }
 
-
-void Robot::setStepPeriod(float period) {
+void Robot::setStepPeriod(float period)
+{
     currentStepPeriod = period;
     gait.setStepPeriod(period);
 }
 
-
-void Robot::setMotion(float x, float y, float rot) {
+void Robot::setMotion(
+    float x,
+    float y,
+    float rot
+) {
     motionX = x;
     motionY = y;
     rotation = rot;
 }
 
-
-void Robot::update() {
-
+void Robot::update()
+{
     unsigned long now = millis();
-    float dt = (now - lastUpdateTime) / 1000.0f;
+
+    float dt =
+        (now - lastUpdateTime) /
+        1000.0f;
+
     lastUpdateTime = now;
 
     if (dt <= 0.0f || dt > 0.5f) {
@@ -247,12 +268,19 @@ void Robot::update() {
 
     if (moving) {
 
-        currentPhase += dt / currentStepPeriod;
+        currentPhase +=
+            dt / currentStepPeriod;
 
         if (currentPhase >= 1.0f) {
-            currentPhase = fmod(currentPhase, 1.0f);
+
+            currentPhase =
+                fmod(
+                    currentPhase,
+                    1.0f
+                );
 
             if (stopRequested) {
+
                 moving = false;
                 stopRequested = false;
                 currentPhase = 0.0f;
@@ -260,16 +288,38 @@ void Robot::update() {
         }
 
         if (stopRequested) {
-            gait.setMotion(0.0f, 0.0f, 0.0f);
+
+            gait.setMotion(
+                0.0f,
+                0.0f,
+                0.0f
+            );
+
         } else {
-            gait.setMotion(motionX, motionY, rotation);
+
+            gait.setMotion(
+                motionX,
+                motionY,
+                rotation
+            );
         }
 
-        gait.update(*this, currentPhase);
+        gait.update(
+            *this,
+            currentPhase
+        );
 
     } else {
 
-        gait.setMotion(0.0f, 0.0f, 0.0f);
-        gait.update(*this, 0.0f);
+        gait.setMotion(
+            0.0f,
+            0.0f,
+            0.0f
+        );
+
+        gait.update(
+            *this,
+            0.0f
+        );
     }
 }

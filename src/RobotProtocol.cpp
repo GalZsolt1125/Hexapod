@@ -2,12 +2,10 @@
 
 namespace RobotProtocol {
 
-// CRC8
-// Polynomial: 0x07
-// Initial value: 0x00
-
-uint8_t crc8(const uint8_t* data, size_t length)
-{
+uint8_t crc8(
+    const uint8_t* data,
+    size_t length
+) {
     uint8_t crc = 0x00;
 
     for (size_t i = 0; i < length; i++) {
@@ -44,7 +42,6 @@ bool isValidCommandType(uint8_t type)
         case CommandType::SET_STEP_PERIOD:
         case CommandType::CALIBRATION:
         case CommandType::GET_STATUS:
-        case CommandType::STATUS:
             return true;
 
         default:

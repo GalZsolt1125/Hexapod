@@ -3,18 +3,6 @@
 
 #include <Arduino.h>
 
-// Robot kommunikációs protokoll
-
-// Frame:
-//   [HEADER][TYPE][SEQ][LEN][PAYLOAD][CRC8]
-
-// HEADER  = 0xAA
-// TYPE    = parancs típusa
-// SEQ     = 8 bites sorszám
-// LEN     = payload hossza
-// PAYLOAD = változó hosszúságú adat
-// CRC8    = TYPE + SEQ + LEN + PAYLOAD
-
 namespace RobotProtocol {
 
 constexpr uint8_t FRAME_HEADER = 0xAA;
@@ -68,9 +56,14 @@ struct GaitPayload {
     uint8_t type;
 };
 
-uint8_t crc8(const uint8_t* data, size_t length);
+uint8_t crc8(
+    const uint8_t* data,
+    size_t length
+);
 
-bool isValidCommandType(uint8_t type);
+bool isValidCommandType(
+    uint8_t type
+);
 
 }
 

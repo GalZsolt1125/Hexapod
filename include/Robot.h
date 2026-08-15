@@ -12,7 +12,6 @@
 #include "RobotController.h"
 #include "Gait.h"
 
-
 class Robot {
 
 private:
@@ -28,17 +27,18 @@ private:
     Gait gait;
 
     Point3D homeBodyPositions[6];
+
     float currentStepPeriod;
 
     bool moving;
     bool stopRequested;
+
     float currentPhase;
     unsigned long lastUpdateTime;
 
     float motionX;
     float motionY;
     float rotation;
-
 
 public:
 
@@ -47,7 +47,6 @@ public:
     void begin();
 
     void start();
-
     void stop();
 
     void calibration();
@@ -68,28 +67,30 @@ public:
     ) const;
 
     void setBodyX(float offset);
-
     void setBodyY(float offset);
-
     void setBodyHeight(float offset);
 
-    void setBodyOffset(float x, float y, float z);
+    void setBodyOffset(
+        float x,
+        float y,
+        float z
+    );
 
     float getBodyX() const;
-
     float getBodyY() const;
-
     float getBodyHeight() const;
 
     void setGaitType(GaitType type);
 
     void setStepLength(float length);
-
     void setStepHeight(float height);
-
     void setStepPeriod(float period);
 
-    void setMotion(float x, float y, float rot);
+    void setMotion(
+        float x,
+        float y,
+        float rot
+    );
 
     void update();
 };

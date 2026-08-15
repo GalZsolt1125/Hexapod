@@ -13,7 +13,9 @@ enum class GaitType {
 };
 
 class Gait {
+
 private:
+
     Point3D homePositions[6];
 
     GaitType gaitType = GaitType::Tripod;
@@ -29,15 +31,28 @@ private:
     float phaseOffsets[6];
 
 public:
+
     Gait();
 
-    void setHomePositions(const Point3D positions[6]);
+    void setHomePositions(
+        const Point3D positions[6]
+    );
 
-    void setType(GaitType type);
+    void setType(
+        GaitType type
+    );
 
-    void setStepLength(float length);
-    void setStepHeight(float height);
-    void setStepPeriod(float period);
+    void setStepLength(
+        float length
+    );
+
+    void setStepHeight(
+        float height
+    );
+
+    void setStepPeriod(
+        float period
+    );
 
     void setMotion(
         float x,
