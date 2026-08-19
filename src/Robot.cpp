@@ -225,9 +225,6 @@ void Robot::setMotion(float x, float y, float rot) {
     motionX = x;
     motionY = y;
     rotation = rot;
-
-    // Ha van érdemi mozgási parancs, elindítjuk a lépést.
-    // Ha nincs (joystick alaphelyzetben), kérjük a forgás/léptetés leállítását.
     if (fabs(x) > 0.01f || fabs(y) > 0.01f || fabs(rot) > 0.01f) {
         start();
     } else {

@@ -16,10 +16,6 @@ Point3D calculateTrajectory(
 
     Point3D target = home;
 
-    // ==================================================
-    // 1. LÉPÉS - ELŐRE / HÁTRA / OLDALRA
-    // ==================================================
-
     float moveX = 0.0f;
     float moveY = 0.0f;
 
@@ -64,48 +60,19 @@ Point3D calculateTrajectory(
     target.x += moveX;
     target.y += moveY;
 
-
-    // ==================================================
-    // 2. HELYBEN FORDULÁS
-    // ==================================================
-
     if (rotation != 0.0f) {
-
-        /*
-         * A rotation nem egy fix pozícióeltolás.
-         *
-         * A lábnak a test középpontja körül kell
-         * "előre-hátra" mozognia egy íven.
-         */
 
         float turnPhase;
 
         if (phase < 0.5f) {
-
-            // Swing:
-            // egyik irányból a másikba
             turnPhase =
                 (phase / 0.5f) - 0.5f;
 
         } else {
-
-            // Stance:
-            // visszatérés
             turnPhase =
                 0.5f -
                 ((phase - 0.5f) / 0.5f);
         }
-
-        /*
-         * A rotation fokban értendő.
-         *
-         * Például:
-         * rotation = 5°
-         *
-         * Ez egy ±5°-os lábmozgást jelent
-         * a test középpontja körül.
-         */
-
         float angle =
             rotation *
             turnPhase *
@@ -114,9 +81,6 @@ Point3D calculateTrajectory(
 
         float cosA = cos(angle);
         float sinA = sin(angle);
-
-        // Az aktuális célpont forgatása
-        // a robot testének középpontja körül.
 
         float rotatedX =
             target.x * cosA -
