@@ -11,12 +11,10 @@
 #include "ServoConfig.h"
 #include "RobotController.h"
 #include "Gait.h"
-
+#include "IMU.h"
 
 class Robot {
-
 private:
-
     Adafruit_PWMServoDriver pwmLeft;
     Adafruit_PWMServoDriver pwmRight;
 
@@ -26,6 +24,7 @@ private:
 
     RobotController* controller;
     Gait gait;
+    IMU imu;
 
     Point3D homeBodyPositions[6];
     float currentStepPeriod;
@@ -39,57 +38,37 @@ private:
     float motionY;
     float rotation;
 
-
 public:
-
     Robot();
 
     void begin();
-
     void start();
-
     void stop();
-
     bool isMoving() const;
 
-    bool setLegPosition(
-        LegID leg,
-        const Point3D& position
-    );
-
-    bool setAllLegsPosition(
-        const Point3D positions[6]
-    );
-
-    Point3D getLegPosition(
-        LegID leg
-    ) const;
+    bool setLegPosition(LegID leg, const Point3D& position);
+    bool setAllLegsPosition(const Point3D positions[6]);
+    Point3D getLegPosition(LegID leg) const;
 
     void setBodyX(float offset);
-
     void setBodyY(float offset);
-
     void setBodyHeight(float offset);
-
     void setBodyOffset(float x, float y, float z);
 
     float getBodyX() const;
-
     float getBodyY() const;
-
     float getBodyHeight() const;
 
     void setGaitType(GaitType type);
-
     void setStepLength(float length);
-
     void setStepHeight(float height);
-
     void setStepPeriod(float period);
-
     void setMotion(float x, float y, float rot);
 
     void update();
+
+    const IMUData& getIMUData() const;
+    bool isIMUReady() const;
 };
 
 #endif

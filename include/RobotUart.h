@@ -7,19 +7,13 @@
 #include "Robot.h"
 
 class RobotUart {
-
 public:
-
-    RobotUart(
-        HardwareSerial& serial,
-        Robot& robot
-    );
+    RobotUart(HardwareSerial& serial, Robot& robot);
 
     void begin();
     void update();
 
 private:
-
     enum class ParserState : uint8_t {
         WAIT_HEADER,
         READ_TYPE,
@@ -30,11 +24,8 @@ private:
     };
 
     bool parseByte(uint8_t byte);
-
     void resetParser();
-
     void executeCommand();
-
     bool readFloatPayload(float& value);
 
     void sendPacket(
@@ -44,6 +35,7 @@ private:
     );
 
     void sendStatus();
+    void sendIMUData();
 
     HardwareSerial& _serial;
     Robot& _robot;
@@ -54,21 +46,18 @@ private:
     uint8_t _seq = 0;
     uint8_t _length = 0;
 
-    uint8_t _payload[
-        RobotProtocol::MAX_PAYLOAD_SIZE
-    ];
-
+    uint8_t _payload[RobotProtocol::MAX_PAYLOAD_SIZE];
     uint8_t _payloadIndex = 0;
-
     uint8_t _receivedCrc = 0;
-
     uint8_t _txSequence = 0;
 
     uint32_t _lastValidPacketTime = 0;
+    uint32_t _lastIMUSendTime = 0;
 
     bool _failsafeActive = false;
 
     static constexpr uint32_t FAILSAFE_TIMEOUT_MS = 500;
+    static constexpr uint32_t IMU_TELEMETRY_INTERVAL_MS = 50; // 20 Hz
 };
 
 #endif

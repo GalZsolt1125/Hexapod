@@ -1,5 +1,6 @@
 #include "Robot.h"
 
+#include <math.h>
 
 namespace {
 
@@ -8,11 +9,9 @@ Adafruit_PWMServoDriver* getDriver(
     Adafruit_PWMServoDriver& right,
     uint8_t driver
 ) {
-
     if (driver == ServoConfig::DRIVER_LEFT) {
         return &left;
     }
-
     return &right;
 }
 
@@ -22,9 +21,7 @@ ServoMotor createServo(
     LegID leg,
     ServoJoint joint
 ) {
-
-    const ServoConfigData& config =
-        ServoConfig::SERVOS[leg][joint];
+    const ServoConfigData& config = ServoConfig::SERVOS[leg][joint];
 
     return ServoMotor(
         getDriver(left, right, config.driver),
@@ -40,12 +37,9 @@ ServoMotor createServo(
 
 }
 
-
 Robot::Robot()
-
     : pwmLeft(0x40),
       pwmRight(0x41),
-
       coxa{
           createServo(pwmLeft, pwmRight, LEG_LF, JOINT_COXA),
           createServo(pwmLeft, pwmRight, LEG_LM, JOINT_COXA),
@@ -54,7 +48,6 @@ Robot::Robot()
           createServo(pwmLeft, pwmRight, LEG_RM, JOINT_COXA),
           createServo(pwmLeft, pwmRight, LEG_RR, JOINT_COXA)
       },
-
       femur{
           createServo(pwmLeft, pwmRight, LEG_LF, JOINT_FEMUR),
           createServo(pwmLeft, pwmRight, LEG_LM, JOINT_FEMUR),
@@ -63,7 +56,6 @@ Robot::Robot()
           createServo(pwmLeft, pwmRight, LEG_RM, JOINT_FEMUR),
           createServo(pwmLeft, pwmRight, LEG_RR, JOINT_FEMUR)
       },
-
       tibia{
           createServo(pwmLeft, pwmRight, LEG_LF, JOINT_TIBIA),
           createServo(pwmLeft, pwmRight, LEG_LM, JOINT_TIBIA),
@@ -72,7 +64,6 @@ Robot::Robot()
           createServo(pwmLeft, pwmRight, LEG_RM, JOINT_TIBIA),
           createServo(pwmLeft, pwmRight, LEG_RR, JOINT_TIBIA)
       },
-
       controller(nullptr),
       currentStepPeriod(0.8f),
       moving(false),
@@ -83,19 +74,12 @@ Robot::Robot()
       motionY(0.0f),
       rotation(0.0f)
 {
-
-    controller =
-        new RobotController(
-            coxa,
-            femur,
-            tibia
-        );
+    controller = new RobotController(coxa, femur, tibia);
 }
 
-
 void Robot::begin() {
-
-    Wire.begin();
+    Wire.begin(21, 22);
+    Wire.setClock(400000);
 
     pwmLeft.begin();
     pwmRight.begin();
@@ -106,7 +90,6 @@ void Robot::begin() {
     delay(500);
 
     for (int i = 0; i < 6; i++) {
-
         Point3D homeLocal = {
             95.255f,
             0.0f,
@@ -114,10 +97,7 @@ void Robot::begin() {
         };
 
         homeBodyPositions[i] =
-            localToBody(
-                static_cast<LegID>(i),
-                homeLocal
-            );
+            localToBody(static_cast<LegID>(i), homeLocal);
     }
 
     setAllLegsPosition(homeBodyPositions);
@@ -128,15 +108,19 @@ void Robot::begin() {
     gait.setStepHeight(40.0f);
     gait.setStepPeriod(currentStepPeriod);
 
+    // Az MPU6050 ugyanazt a Wire I2C buszt használja,
+    // mint a két PCA9685. A kalibrálás alatt a robot álljon.
+    if (!imu.begin()) {
+        Serial.println("FIGYELEM: az IMU nem inicializalodott.");
+    }
+
     lastUpdateTime = millis();
 }
-
 
 void Robot::start() {
     moving = true;
     stopRequested = false;
 }
-
 
 void Robot::stop() {
     if (moving) {
@@ -144,87 +128,72 @@ void Robot::stop() {
     }
 }
 
-
 bool Robot::isMoving() const {
     return moving;
 }
-
 
 bool Robot::setLegPosition(LegID leg, const Point3D& position) {
     return controller->setLegPosition(leg, position);
 }
 
-
 bool Robot::setAllLegsPosition(const Point3D positions[6]) {
     return controller->setAllLegsPosition(positions);
 }
-
 
 Point3D Robot::getLegPosition(LegID leg) const {
     return controller->getLegPosition(leg);
 }
 
-
 void Robot::setBodyX(float offset) {
     controller->setBodyX(offset);
 }
-
 
 void Robot::setBodyY(float offset) {
     controller->setBodyY(offset);
 }
 
-
 void Robot::setBodyHeight(float offset) {
     controller->setBodyHeight(offset);
 }
-
 
 void Robot::setBodyOffset(float x, float y, float z) {
     controller->setBodyOffset(x, y, z);
 }
 
-
 float Robot::getBodyX() const {
     return controller->getBodyX();
 }
-
 
 float Robot::getBodyY() const {
     return controller->getBodyY();
 }
 
-
 float Robot::getBodyHeight() const {
     return controller->getBodyHeight();
 }
-
 
 void Robot::setGaitType(GaitType type) {
     gait.setType(type);
 }
 
-
 void Robot::setStepLength(float length) {
     gait.setStepLength(length);
 }
 
-
 void Robot::setStepHeight(float height) {
     gait.setStepHeight(height);
 }
-
 
 void Robot::setStepPeriod(float period) {
     currentStepPeriod = period;
     gait.setStepPeriod(period);
 }
 
-
 void Robot::setMotion(float x, float y, float rot) {
     motionX = x;
     motionY = y;
     rotation = rot;
+
     if (fabs(x) > 0.01f || fabs(y) > 0.01f || fabs(rot) > 0.01f) {
         start();
     } else {
@@ -232,8 +201,10 @@ void Robot::setMotion(float x, float y, float rot) {
     }
 }
 
-
 void Robot::update() {
+    // Az IMU minden robotciklusban frissül, de a mérést
+    // egyelőre nem használjuk fel a járás módosítására.
+    imu.update();
 
     unsigned long now = millis();
     float dt = (now - lastUpdateTime) / 1000.0f;
@@ -244,7 +215,6 @@ void Robot::update() {
     }
 
     if (moving) {
-
         currentPhase += dt / currentStepPeriod;
 
         if (currentPhase >= 1.0f) {
@@ -264,10 +234,16 @@ void Robot::update() {
         }
 
         gait.update(*this, currentPhase);
-
     } else {
-
         gait.setMotion(0.0f, 0.0f, 0.0f);
         gait.update(*this, 0.0f);
     }
+}
+
+const IMUData& Robot::getIMUData() const {
+    return imu.getData();
+}
+
+bool Robot::isIMUReady() const {
+    return imu.isReady();
 }

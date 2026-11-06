@@ -13,16 +13,15 @@ RobotUart::RobotUart(
 {
 }
 
-void RobotUart::begin()
-{
+void RobotUart::begin() {
     _state = ParserState::WAIT_HEADER;
     _lastValidPacketTime = millis();
+    _lastIMUSendTime = millis();
     _failsafeActive = false;
     _txSequence = 0;
 }
 
-void RobotUart::update()
-{
+void RobotUart::update() {
     while (_serial.available() > 0) {
         uint8_t byte = _serial.read();
         parseByte(byte);
@@ -30,92 +29,68 @@ void RobotUart::update()
 
     if (
         !_failsafeActive &&
-        (millis() - _lastValidPacketTime >
-         FAILSAFE_TIMEOUT_MS)
+        (millis() - _lastValidPacketTime > FAILSAFE_TIMEOUT_MS)
     ) {
         _robot.stop();
         _failsafeActive = true;
     }
+
+    // Az IMU-adatküldés a bejövő vezérlőparancsoktól független.
+    if (millis() - _lastIMUSendTime >= IMU_TELEMETRY_INTERVAL_MS) {
+        _lastIMUSendTime = millis();
+        sendIMUData();
+    }
 }
 
-bool RobotUart::parseByte(uint8_t byte)
-{
+bool RobotUart::parseByte(uint8_t byte) {
     switch (_state) {
-
         case ParserState::WAIT_HEADER:
-
             if (byte == FRAME_HEADER) {
                 _state = ParserState::READ_TYPE;
             }
-
             break;
 
-
         case ParserState::READ_TYPE:
-
             if (!isValidCommandType(byte)) {
                 resetParser();
                 break;
             }
-
             _type = byte;
             _state = ParserState::READ_SEQ;
-
             break;
-
 
         case ParserState::READ_SEQ:
-
             _seq = byte;
             _state = ParserState::READ_LENGTH;
-
             break;
 
-
         case ParserState::READ_LENGTH:
-
             _length = byte;
-
             if (_length > MAX_PAYLOAD_SIZE) {
                 resetParser();
                 break;
             }
-
             _payloadIndex = 0;
-
-            if (_length == 0) {
-                _state = ParserState::READ_CRC;
-            } else {
-                _state = ParserState::READ_PAYLOAD;
-            }
-
+            _state = (_length == 0)
+                ? ParserState::READ_CRC
+                : ParserState::READ_PAYLOAD;
             break;
 
-
         case ParserState::READ_PAYLOAD:
-
             if (_payloadIndex >= MAX_PAYLOAD_SIZE) {
                 resetParser();
                 break;
             }
-
             _payload[_payloadIndex++] = byte;
-
             if (_payloadIndex >= _length) {
                 _state = ParserState::READ_CRC;
             }
-
             break;
 
-
-        case ParserState::READ_CRC:
-        {
+        case ParserState::READ_CRC: {
             _receivedCrc = byte;
 
-            uint8_t crcData[
-                3 + MAX_PAYLOAD_SIZE
-            ];
-
+            uint8_t crcData[3 + MAX_PAYLOAD_SIZE];
             crcData[0] = _type;
             crcData[1] = _seq;
             crcData[2] = _length;
@@ -124,26 +99,17 @@ bool RobotUart::parseByte(uint8_t byte)
                 crcData[3 + i] = _payload[i];
             }
 
-            uint8_t calculatedCrc =
-                crc8(
-                    crcData,
-                    3 + _length
-                );
+            uint8_t calculatedCrc = crc8(crcData, 3 + _length);
 
             if (calculatedCrc == _receivedCrc) {
-
                 _lastValidPacketTime = millis();
                 _failsafeActive = false;
-
                 executeCommand();
-
                 resetParser();
-
                 return true;
             }
 
             resetParser();
-
             break;
         }
     }
@@ -151,271 +117,134 @@ bool RobotUart::parseByte(uint8_t byte)
     return false;
 }
 
-void RobotUart::resetParser()
-{
+void RobotUart::resetParser() {
     _state = ParserState::WAIT_HEADER;
-
     _type = 0;
     _seq = 0;
     _length = 0;
-
     _payloadIndex = 0;
     _receivedCrc = 0;
 }
 
-bool RobotUart::readFloatPayload(float& value)
-{
+bool RobotUart::readFloatPayload(float& value) {
     if (_length != sizeof(FloatPayload)) {
         return false;
     }
 
     FloatPayload payload;
-
-    memcpy(
-        &payload,
-        _payload,
-        sizeof(FloatPayload)
-    );
-
+    memcpy(&payload, _payload, sizeof(FloatPayload));
     value = payload.value;
-
     return true;
 }
 
-void RobotUart::executeCommand()
-{
-    CommandType command =
-        static_cast<CommandType>(_type);
+void RobotUart::executeCommand() {
+    CommandType command = static_cast<CommandType>(_type);
 
     switch (command) {
-
         case CommandType::START:
-
-            if (_length != 0) {
-                return;
-            }
-
+            if (_length != 0) return;
             _robot.start();
-
             break;
-
 
         case CommandType::STOP:
-
-            if (_length != 0) {
-                return;
-            }
-
+            if (_length != 0) return;
             _robot.stop();
-
             break;
 
-
-        case CommandType::SET_MOTION:
-        {
-            if (_length != sizeof(MotionPayload)) {
-                return;
-            }
+        case CommandType::SET_MOTION: {
+            if (_length != sizeof(MotionPayload)) return;
 
             MotionPayload payload;
+            memcpy(&payload, _payload, sizeof(MotionPayload));
 
-            memcpy(
-                &payload,
-                _payload,
-                sizeof(MotionPayload)
-            );
-
-            _robot.setMotion(
-                payload.x,
-                payload.y,
-                payload.rot
-            );
-
+            _robot.setMotion(payload.x, payload.y, payload.rot);
             break;
         }
 
-
-        case CommandType::SET_BODY_X:
-        {
+        case CommandType::SET_BODY_X: {
             float value;
-
-            if (!readFloatPayload(value)) {
-                return;
-            }
-
+            if (!readFloatPayload(value)) return;
             _robot.setBodyX(value);
-
             break;
         }
 
-
-        case CommandType::SET_BODY_Y:
-        {
+        case CommandType::SET_BODY_Y: {
             float value;
-
-            if (!readFloatPayload(value)) {
-                return;
-            }
-
+            if (!readFloatPayload(value)) return;
             _robot.setBodyY(value);
-
             break;
         }
 
-
-        case CommandType::SET_BODY_HEIGHT:
-        {
+        case CommandType::SET_BODY_HEIGHT: {
             float value;
-
-            if (!readFloatPayload(value)) {
-                return;
-            }
-
+            if (!readFloatPayload(value)) return;
             _robot.setBodyHeight(value);
-
             break;
         }
 
-
-        case CommandType::SET_BODY_OFFSET:
-        {
-            if (_length != sizeof(BodyOffsetPayload)) {
-                return;
-            }
+        case CommandType::SET_BODY_OFFSET: {
+            if (_length != sizeof(BodyOffsetPayload)) return;
 
             BodyOffsetPayload payload;
+            memcpy(&payload, _payload, sizeof(BodyOffsetPayload));
 
-            memcpy(
-                &payload,
-                _payload,
-                sizeof(BodyOffsetPayload)
-            );
-
-            _robot.setBodyOffset(
-                payload.x,
-                payload.y,
-                payload.z
-            );
-
+            _robot.setBodyOffset(payload.x, payload.y, payload.z);
             break;
         }
 
-
-        case CommandType::SET_GAIT:
-        {
-            if (_length != sizeof(GaitPayload)) {
-                return;
-            }
+        case CommandType::SET_GAIT: {
+            if (_length != sizeof(GaitPayload)) return;
 
             GaitPayload payload;
+            memcpy(&payload, _payload, sizeof(GaitPayload));
 
-            memcpy(
-                &payload,
-                _payload,
-                sizeof(GaitPayload)
-            );
-
-            switch (
-                static_cast<GaitTypeWire>(
-                    payload.type
-                )
-            ) {
-
+            switch (static_cast<GaitTypeWire>(payload.type)) {
                 case GaitTypeWire::TRIPOD:
-
-                    _robot.setGaitType(
-                        GaitType::Tripod
-                    );
-
+                    _robot.setGaitType(GaitType::Tripod);
                     break;
-
-
                 case GaitTypeWire::WAVE:
-
-                    _robot.setGaitType(
-                        GaitType::Wave
-                    );
-
+                    _robot.setGaitType(GaitType::Wave);
                     break;
-
-
                 case GaitTypeWire::DANCE:
-
-                    _robot.setGaitType(
-                        GaitType::Dance
-                    );
-
+                    _robot.setGaitType(GaitType::Dance);
                     break;
-
-
                 default:
-
                     return;
             }
-
             break;
         }
 
-
-        case CommandType::SET_STEP_LENGTH:
-        {
+        case CommandType::SET_STEP_LENGTH: {
             float value;
-
-            if (!readFloatPayload(value)) {
-                return;
-            }
-
+            if (!readFloatPayload(value)) return;
             _robot.setStepLength(value);
-
             break;
         }
 
-
-        case CommandType::SET_STEP_HEIGHT:
-        {
+        case CommandType::SET_STEP_HEIGHT: {
             float value;
-
-            if (!readFloatPayload(value)) {
-                return;
-            }
-
+            if (!readFloatPayload(value)) return;
             _robot.setStepHeight(value);
-
             break;
         }
 
-
-        case CommandType::SET_STEP_PERIOD:
-        {
+        case CommandType::SET_STEP_PERIOD: {
             float value;
-
-            if (!readFloatPayload(value)) {
-                return;
-            }
-
-            if (value <= 0.05f) {
-                return;
-            }
-
+            if (!readFloatPayload(value) || value <= 0.05f) return;
             _robot.setStepPeriod(value);
-
             break;
         }
-
 
         case CommandType::GET_STATUS:
-
-            if (_length != 0) {
-                return;
-            }
-
+            if (_length != 0) return;
             sendStatus();
-
             break;
 
-
+        // Ezek kimenő csomagtípusok; a WROOM nem várja őket
+        // vezérlőparancsként a bemeneti UART-on.
         case CommandType::STATUS:
-
+        case CommandType::IMU_DATA:
+        case CommandType::SET_CAMERA:
             break;
     }
 }
@@ -424,21 +253,15 @@ void RobotUart::sendPacket(
     CommandType type,
     const uint8_t* payload,
     uint8_t length
-)
-{
+) {
     if (length > MAX_PAYLOAD_SIZE) {
         return;
     }
 
     uint8_t sequence = _txSequence++;
 
-    uint8_t crcData[
-        3 + MAX_PAYLOAD_SIZE
-    ];
-
-    crcData[0] =
-        static_cast<uint8_t>(type);
-
+    uint8_t crcData[3 + MAX_PAYLOAD_SIZE];
+    crcData[0] = static_cast<uint8_t>(type);
     crcData[1] = sequence;
     crcData[2] = length;
 
@@ -446,42 +269,53 @@ void RobotUart::sendPacket(
         crcData[3 + i] = payload[i];
     }
 
-    uint8_t crc =
-        crc8(
-            crcData,
-            3 + length
-        );
+    uint8_t crc = crc8(crcData, 3 + length);
 
     _serial.write(FRAME_HEADER);
-
-    _serial.write(
-        static_cast<uint8_t>(type)
-    );
-
+    _serial.write(static_cast<uint8_t>(type));
     _serial.write(sequence);
-
     _serial.write(length);
 
     if (length > 0) {
-        _serial.write(
-            payload,
-            length
-        );
+        _serial.write(payload, length);
     }
 
     _serial.write(crc);
 }
 
-void RobotUart::sendStatus()
-{
+void RobotUart::sendStatus() {
     uint8_t payload[1];
-
-    payload[0] =
-        _robot.isMoving() ? 1 : 0;
+    payload[0] = _robot.isMoving() ? 1 : 0;
 
     sendPacket(
         CommandType::STATUS,
         payload,
+        sizeof(payload)
+    );
+}
+
+void RobotUart::sendIMUData() {
+    if (!_robot.isIMUReady()) {
+        return;
+    }
+
+    const IMUData& data = _robot.getIMUData();
+
+    IMUPayload payload;
+    payload.roll = data.roll;
+    payload.pitch = data.pitch;
+
+    payload.accelX = data.accelX;
+    payload.accelY = data.accelY;
+    payload.accelZ = data.accelZ;
+
+    payload.gyroX = data.gyroX;
+    payload.gyroY = data.gyroY;
+    payload.gyroZ = data.gyroZ;
+
+    sendPacket(
+        CommandType::IMU_DATA,
+        reinterpret_cast<const uint8_t*>(&payload),
         sizeof(payload)
     );
 }

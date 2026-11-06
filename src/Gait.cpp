@@ -40,12 +40,12 @@ void Gait::setType(GaitType type) {
     else if (type == GaitType::Wave) {
 
         phaseOffsets[LEG_LF] = 0.00f;
-        phaseOffsets[LEG_LM] = 0.33f;
-        phaseOffsets[LEG_LR] = 0.66f;
+        phaseOffsets[LEG_LM] = 0.16f;
+        phaseOffsets[LEG_LR] = 0.33f;
 
-        phaseOffsets[LEG_RF] = 0.33f;
+        phaseOffsets[LEG_RF] = 0.50f;
         phaseOffsets[LEG_RM] = 0.66f;
-        phaseOffsets[LEG_RR] = 0.00f;
+        phaseOffsets[LEG_RR] = 0.83f;
     }
 
     else if (type == GaitType::Dance) {
