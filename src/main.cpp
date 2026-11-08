@@ -1,7 +1,9 @@
 #include <Arduino.h>
+#include <Wire.h>
 
 #include "Robot.h"
 #include "RobotUart.h"
+#include "IMU.h"
 
 Robot robot;
 
@@ -11,6 +13,12 @@ RobotUart robotUart(
     RobotSerial,
     robot
 );
+
+IMU imu;
+
+constexpr uint32_t CONTROL_PERIOD_US = 20000; // 50 Hz
+
+uint32_t lastControlUs = 0;
 
 void setup()
 {
@@ -25,6 +33,9 @@ void setup()
         UART_RX_PIN,
         UART_TX_PIN
     );
+
+    Wire.begin(21, 22);
+    Wire.setClock(400000);
 
     robot.begin();
 
@@ -50,14 +61,47 @@ void setup()
         -20.0f
     );
 
+    Serial.println();
+    Serial.println("Initializing IMU...");
+
+    if (imu.begin()) {
+
+        Serial.println("IMU READY");
+
+    } else {
+
+        Serial.println("WARNING: IMU unavailable!");
+        Serial.println("Robot will run without IMU data.");
+    }
+
     robotUart.begin();
+
+    lastControlUs = micros();
+
+    Serial.println();
+    Serial.println("HEXAPOD INITIALIZATION COMPLETE");
+    Serial.println("Control frequency: 50 Hz");
 }
 
 void loop()
 {
+
     robotUart.update();
 
-    robot.update();
+    uint32_t nowUs = micros();
 
-    delay(20);
+    if ((uint32_t)(nowUs - lastControlUs) >= CONTROL_PERIOD_US)
+    {
+        lastControlUs += CONTROL_PERIOD_US;
+
+        if ((uint32_t)(nowUs - lastControlUs) >= CONTROL_PERIOD_US) {
+            lastControlUs = nowUs;
+        }
+
+        if (imu.isReady()) {
+            imu.update();
+        }
+
+        robot.update();
+    }
 }
