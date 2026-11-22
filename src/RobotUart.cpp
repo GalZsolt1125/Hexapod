@@ -239,6 +239,20 @@ void RobotUart::executeCommand() {
             if (_length != 0) return;
             sendStatus();
             break;
+        
+        case CommandType::SET_SERVO_OFFSET: {
+            if (_length != sizeof(ServoOffsetPayload)) return;
+
+            ServoOffsetPayload payload;
+            memcpy(&payload, _payload, sizeof(ServoOffsetPayload));
+
+            _robot.setServoOffset(
+                payload.legId,
+                payload.jointId,
+                payload.offset
+            );
+            break;
+        }
 
         // Ezek kimenő csomagtípusok; a WROOM nem várja őket
         // vezérlőparancsként a bemeneti UART-on.

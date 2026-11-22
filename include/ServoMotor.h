@@ -82,9 +82,7 @@ public:
         }
     }
 
-    void setOffset(float newOffset) {
-        offset = newOffset;
-    }
+    void setOffset(float newOffset) {offset = newOffset;}
 
     void setInverted(bool isInverted) {
         inverted = isInverted;

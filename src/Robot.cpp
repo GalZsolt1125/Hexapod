@@ -108,7 +108,7 @@ void Robot::begin() {
     gait.setStepHeight(40.0f);
     gait.setStepPeriod(currentStepPeriod);
 
-    // Az MPU6050 ugyanazt a Wire I2C buszt használja,
+    // Az MPU6500 ugyanazt a Wire I2C buszt használja,
     // mint a két PCA9685. A kalibrálás alatt a robot álljon.
     if (!imu.begin()) {
         Serial.println("FIGYELEM: az IMU nem inicializalodott.");
@@ -199,6 +199,28 @@ void Robot::setMotion(float x, float y, float rot) {
     } else {
         stop();
     }
+}
+
+void Robot::setServoOffset(uint8_t legId, uint8_t jointId, int offset) {
+    if (legId >= 6 || jointId >= 3) {
+        return;
+    }
+
+    switch (jointId) {
+        case JOINT_COXA:
+            coxa[legId].setOffset(offset);
+            break;
+
+        case JOINT_FEMUR:
+            femur[legId].setOffset(offset);
+            break;
+
+        case JOINT_TIBIA:
+            tibia[legId].setOffset(offset);
+            break;
+    }
+
+    setAllLegsPosition(homeBodyPositions);
 }
 
 void Robot::update() {

@@ -64,6 +64,7 @@ public:
     void setStepHeight(float height);
     void setStepPeriod(float period);
     void setMotion(float x, float y, float rot);
+    void setServoOffset(uint8_t legId, uint8_t jointId, int offset);
 
     void update();
 
